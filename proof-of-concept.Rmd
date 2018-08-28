@@ -5,9 +5,11 @@ output: html_document
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
+source("R/sl-library.R")
 ```
 
 ```{r}
+
 data = data.table::fread("data-raw/train.csv")
 dim(data)
 
@@ -50,15 +52,12 @@ summary(reg)
 ```{r sl}
 library(SuperLearner)
 
-screen.corRank5 = function(...) SuperLearner::screen.corRank(..., rank = 5)
+screen.corRank5 = function(...) screen.corRank2(..., rank = 5)
 
 sl_lib = list(c("SL.xgboost", "screen.corRank5"),
               c("SL.ranger", "screen.corRank5"),
                 "SL.glmnet",
                 "SL.mean")
-
-
-3 
 
 sl = SuperLearner::SuperLearner(Y = y, X = x,
                   family = binomial(),
