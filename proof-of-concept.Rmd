@@ -61,10 +61,11 @@ y = as.numeric(data$label == "s")
 corr = ck37r::vim_corr(names(x), cbind(y, x), "y", bootse = FALSE)
 
 # Look at the top 20 covariates most correlated with the outcome.
+# All are incredibly significant.
 head(corr, n = 20)
 ```
 
-# Reg analysis
+# OLS analysis
 
 ```{r eda_reg}
 reg = lm(y ~ ., data = x)
