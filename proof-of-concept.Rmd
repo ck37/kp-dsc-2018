@@ -1,0 +1,74 @@
+---
+title: "import data"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+data = data.table::fread("data-raw/train.csv")
+dim(data)
+
+names(data) = tolower(names(data))
+
+table(sapply(data, class))
+sapply(data, class)
+
+# It's all training data - can remove this column.
+table(data$kaggleset)
+data$kaggleset = NULL
+
+tibble::glimpse(data)
+
+# No missing data - NAs at least.
+colMeans(is.na(data))
+
+
+table(data$label, useNA = "ifany")
+
+data$label = as.factor(data$label)
+```
+
+```{r}
+x = as.data.frame(data)[, !names(data) %in% c("label")]
+y = as.numeric(data$label == "s")
+```
+
+# Reg analysis
+
+```{r}
+reg = lm(as.numeric(label) ~ ., data = data)
+
+# Adj. R-sqr of 0.6219
+summary(reg)
+```
+
+# Most basic model possible
+
+```{r sl}
+library(SuperLearner)
+
+screen.corRank5 = function(...) SuperLearner::screen.corRank(..., rank = 5)
+
+sl_lib = list(c("SL.xgboost", "screen.corRank5"),
+              c("SL.ranger", "screen.corRank5"),
+                "SL.glmnet",
+                "SL.mean")
+
+sl = SuperLearner::SuperLearner(Y = y, X = x,
+                  family = binomial(),
+                  verbose = TRUE,
+                  SL.library = sl_lib,
+                  cvControl = SuperLearner.CV.control(V = 3L))
+sl
+
+ck37r::auc_table(sl, y = y)
+```
+
+# Predict on test
+
+```{r}
+
+```
