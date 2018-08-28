@@ -26,7 +26,7 @@ SL.xgboost_fast =
   function(...) SL.xgboost(..., nthread = RhpcBLASctl::get_num_cores())
 
 # Faster glmnet.
-SL.glmnet_fast = function(...) SL.glmnet2(..., parallel = TRUE, nlambda = 20L, nfolds = 5L)
+SL.glmnet_fast = function(...) ck37r::SL.glmnet2(..., parallel = TRUE, nlambda = 20L, nfolds = 5L)
 
 # Faster ranger (itself a faster version of RF).
 SL.ranger_fast =
