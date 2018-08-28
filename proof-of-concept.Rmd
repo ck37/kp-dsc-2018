@@ -7,11 +7,16 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 source("R/sl-library.R")
 
+library(ggplot2)
 library(SuperLearner)
 library(data.table)
 library(xgboost)
 library(glmnet)
 library(ranger)
+library(doParallel)
+# Install this version, the CRAN version is very old sadly --
+# devtools::install_github("ck37/ck37r")
+library(ck37r)
 ```
 
 ```{r}
@@ -40,16 +45,24 @@ data$label = as.factor(data$label)
 ```
 
 ```{r}
-x = as.data.frame(data)[, !names(data) %in% c("label")]
+x = as.data.frame(data)[, !names(data) %in% c("label",
+                                              # Not yet sure what these are.
+                                              "eventid", "kaggleweight", "weight")]
 y = as.numeric(data$label == "s")
+```
+
+# Correlation analysis
+
+```{r}
+ck37r::vim_corr(names(x), cbind(y, x), "y", bootse = FALSE)
 ```
 
 # Reg analysis
 
 ```{r}
-reg = lm(as.numeric(label) ~ ., data = data)
+reg = lm(y ~ ., data = x)
 
-# Adj. R-sqr of 0.6219
+# Adj. R-sqr of 0.2464
 summary(reg)
 ```
 
@@ -59,12 +72,16 @@ summary(reg)
 
 screen.corRank5 = function(...) screen.corRank2(..., rank = 5)
 
+# Setup parallel backend for glmnet_fast.
+doParallel::registerDoParallel(cores = RhpcBLASctl::get_num_cores())
+
 # Add screeners so that it's not as slow to estimate.
 sl_lib = list(c("SL.xgboost_fast", "screen.corRank5"),
               c("SL.ranger_fast", "screen.corRank5"),
-                "SL.glmnet_fast",
+              c("SL.glmnet_fast", "screen.corRank5"),
                 "SL.mean")
 
+set.seed(3137033, "L'Ecuyer-CMRG")
 sl = SuperLearner::SuperLearner(Y = y, X = x,
                   family = binomial(),
                   verbose = TRUE,
@@ -72,32 +89,43 @@ sl = SuperLearner::SuperLearner(Y = y, X = x,
                   cvControl = SuperLearner.CV.control(V = 3L))
 sl
 
+# Review auc of the learners.
+# xgboost and ranger are both around 0.88, glmnet at 0.77
 ck37r::auc_table(sl, y = y)
+# TODO: export table.
 
+# Plot ROC curve.
 ck37r::plot_roc(sl, y = y)
+ggsave("visuals/roc-proof-of-concept.png")
 
-save(sl, file = "data/model-proof-of-concept-sl.RData")
+# Save our results
+save(sl,
+     file = "data/model-proof-of-concept-sl.RData")
 ```
 
 # Predict on test
 
 ```{r}
-test = data.table::fread("data-raw/test.csv")
+test = data.table::fread("data-raw/test.csv", data.table = FALSE)
 dim(test)
 
 names(test) = tolower(names(test))
+names(test)
 
-test$kaggleset = NULL
+# Restrict to columns that we want.
+test_df = test[, !names(test) %in% c("weight", "kaggleset", "kaggleweight", "eventid")]
 
-predictions = predict(sl, test, onlySL = TRUE)$pred
+# Apply SuperLearner to generate predictions.
+predictions = predict(sl, test_df, onlySL = TRUE,
+                      num.threads = RhpcBLASctl::get_num_cores())$pred
 
 summary(predictions)
 
 qplot(predictions)
 
 # TODO: fix $someid.
-export = cbind(test$someid, predictions)
+export = cbind(test$eventid, predictions)
 
-rio::export(export, path = "exports/proof-of-concept.csv")
+rio::export(export, file = "exports/proof-of-concept.csv")
 
 ```
