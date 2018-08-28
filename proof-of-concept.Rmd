@@ -121,7 +121,8 @@ predictions = predict(sl, test_df, onlySL = TRUE,
 
 summary(predictions)
 
-qplot(predictions)
+qplot(predictions) + theme_minimal()
+ggsave("visuals/hist-proof-of-concept.png")
 
 # TODO: fix $someid.
 export = cbind(test$eventid, predictions)
