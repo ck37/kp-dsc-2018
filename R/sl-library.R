@@ -19,3 +19,17 @@ screen.corRank2 <-
     whichVariable <- (rank(-listp) <= rank | grepl(inclusion_regex, colnames(X), perl = TRUE))
     return(whichVariable)
   }
+
+
+# Multithreaded version of XGBoost when using sequential SuperLearner.
+SL.xgboost_fast =
+  function(...) SL.xgboost(..., nthread = RhpcBLASctl::get_num_cores())
+
+# Faster glmnet.
+SL.glmnet_fast = function(...) SL.glmnet2(..., parallel = TRUE, nlambda = 20L, nfolds = 5L)
+
+# Faster ranger (itself a faster version of RF).
+SL.ranger_fast =
+  function(...) SL.ranger(..., num.trees = 200L,
+                          min.node.size = 20L,
+                          num.threads = RhpcBLASctl::get_num_cores())

@@ -6,6 +6,12 @@ output: html_document
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 source("R/sl-library.R")
+
+library(SuperLearner)
+library(data.table)
+library(xgboost)
+library(glmnet)
+library(ranger)
 ```
 
 ```{r}
@@ -50,13 +56,13 @@ summary(reg)
 # Most basic model possible
 
 ```{r sl}
-library(SuperLearner)
 
 screen.corRank5 = function(...) screen.corRank2(..., rank = 5)
 
-sl_lib = list(c("SL.xgboost", "screen.corRank5"),
-              c("SL.ranger", "screen.corRank5"),
-                "SL.glmnet",
+# Add screeners so that it's not as slow to estimate.
+sl_lib = list(c("SL.xgboost_fast", "screen.corRank5"),
+              c("SL.ranger_fast", "screen.corRank5"),
+                "SL.glmnet_fast",
                 "SL.mean")
 
 sl = SuperLearner::SuperLearner(Y = y, X = x,
@@ -67,10 +73,31 @@ sl = SuperLearner::SuperLearner(Y = y, X = x,
 sl
 
 ck37r::auc_table(sl, y = y)
+
+ck37r::plot_roc(sl, y = y)
+
+save(sl, file = "data/model-proof-of-concept-sl.RData")
 ```
 
 # Predict on test
 
 ```{r}
+test = data.table::fread("data-raw/test.csv")
+dim(test)
+
+names(test) = tolower(names(test))
+
+test$kaggleset = NULL
+
+predictions = predict(sl, test, onlySL = TRUE)$pred
+
+summary(predictions)
+
+qplot(predictions)
+
+# TODO: fix $someid.
+export = cbind(test$someid, predictions)
+
+rio::export(export, path = "exports/proof-of-concept.csv")
 
 ```
