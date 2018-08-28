@@ -5,6 +5,8 @@ output: html_document
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
+
+# Contains custom SuperLearner wrappers and screeners.
 source("R/sl-library.R")
 
 library(ggplot2)
@@ -19,7 +21,7 @@ library(doParallel)
 library(ck37r)
 ```
 
-```{r}
+```{r import_data}
 
 data = data.table::fread("data-raw/train.csv")
 dim(data)
@@ -28,6 +30,9 @@ names(data) = tolower(names(data))
 
 table(sapply(data, class))
 sapply(data, class)
+
+# Define our outcome variable.
+var_outcome = "label"
 
 # It's all training data - can remove this column.
 table(data$kaggleset)
@@ -38,28 +43,30 @@ tibble::glimpse(data)
 # No missing data - NAs at least.
 colMeans(is.na(data))
 
-
-table(data$label, useNA = "ifany")
-
-data$label = as.factor(data$label)
+# Review our outcome distribution - not imbalanced.
+table(data[[var_outcome]], useNA = "ifany")
 ```
 
-```{r}
-x = as.data.frame(data)[, !names(data) %in% c("label",
-                                              # Not yet sure what these are.
-                                              "eventid", "kaggleweight", "weight")]
+```{r data_prep}
+remove_cols = c(var_outcome,
+                # TODO: figure out what these columns mean.
+                "eventid", "kaggleweight", "weight")
+x = as.data.frame(data)[, !names(data) %in% remove_cols]
 y = as.numeric(data$label == "s")
 ```
 
 # Correlation analysis
 
-```{r}
-ck37r::vim_corr(names(x), cbind(y, x), "y", bootse = FALSE)
+```{r eda_corr}
+corr = ck37r::vim_corr(names(x), cbind(y, x), "y", bootse = FALSE)
+
+# Look at the top 20 covariates most correlated with the outcome.
+head(corr, n = 20)
 ```
 
 # Reg analysis
 
-```{r}
+```{r eda_reg}
 reg = lm(y ~ ., data = x)
 
 # Adj. R-sqr of 0.2464
@@ -68,7 +75,7 @@ summary(reg)
 
 # Most basic model possible
 
-```{r sl}
+```{r model_sl}
 
 screen.corRank5 = function(...) screen.corRank2(..., rank = 5)
 
@@ -76,6 +83,7 @@ screen.corRank5 = function(...) screen.corRank2(..., rank = 5)
 doParallel::registerDoParallel(cores = RhpcBLASctl::get_num_cores())
 
 # Add screeners so that it's not as slow to estimate.
+# This will select only the top 5 covariates based on correlation with the outcome.
 sl_lib = list(c("SL.xgboost_fast", "screen.corRank5"),
               c("SL.ranger_fast", "screen.corRank5"),
               c("SL.glmnet_fast", "screen.corRank5"),
@@ -105,12 +113,11 @@ save(sl,
 
 # Predict on test
 
-```{r}
+```{r test_prediction}
 test = data.table::fread("data-raw/test.csv", data.table = FALSE)
 dim(test)
 
-names(test) = tolower(names(test))
-names(test)
+(names(test) = tolower(names(test)))
 
 # Restrict to columns that we want.
 test_df = test[, !names(test) %in% c("weight", "kaggleset", "kaggleweight", "eventid")]
@@ -124,9 +131,10 @@ summary(predictions)
 qplot(predictions) + theme_minimal()
 ggsave("visuals/hist-proof-of-concept.png")
 
-# TODO: fix $someid.
+# Currently guessing that $eventid is the primary id for each observation.
 export = cbind(test$eventid, predictions)
 
+# Generate a csv file to upload to competition submission page.
 rio::export(export, file = "exports/proof-of-concept.csv")
 
 ```
