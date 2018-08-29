@@ -34,10 +34,6 @@ sapply(data, class)
 # Define our outcome variable.
 var_outcome = "label"
 
-# It's all training data - can remove this column.
-table(data$kaggleset)
-data$kaggleset = NULL
-
 tibble::glimpse(data)
 
 # No missing data - NAs at least.
@@ -49,6 +45,8 @@ table(data[[var_outcome]], useNA = "ifany")
 
 ```{r data_prep}
 remove_cols = c(var_outcome,
+                # Simply notes that this is all training data.
+                "kaggleset",
                 # TODO: figure out what these columns mean.
                 "eventid", "kaggleweight", "weight")
 x = as.data.frame(data)[, !names(data) %in% remove_cols]
