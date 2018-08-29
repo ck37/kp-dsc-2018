@@ -136,7 +136,13 @@ qplot(predictions) + theme_minimal()
 ggsave("visuals/hist-proof-of-concept.png")
 
 # Currently guessing that $eventid is the primary id for each observation.
-export = cbind(test$eventid, predictions)
+export = data.frame(EventId = test$eventid, Label = predictions)
+
+# Convert probability prediction to a class prediction.
+export$Label = ifelse(export$Label > 0.5, "b", "s")
+
+table(export$Label)
+prop.table(table(export$Label))
 
 # Generate a csv file to upload to competition submission page.
 rio::export(export, file = "exports/proof-of-concept.csv")
