@@ -139,7 +139,7 @@ ggsave("visuals/hist-proof-of-concept.png")
 export = data.frame(EventId = test$eventid, Label = predictions)
 
 # Convert probability prediction to a class prediction.
-export$Label = ifelse(export$Label > 0.5, "b", "s")
+export$Label = ifelse(export$Label > 0.5, "s", "b")
 
 table(export$Label)
 prop.table(table(export$Label))
