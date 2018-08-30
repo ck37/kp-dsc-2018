@@ -57,6 +57,8 @@ sl =
 
 sl
 
+cat("Execution time:", round(sl$times$everything["elapsed"] / 60, 1), "minutes.\n")
+
 # Save our results and our task for posterity.
 save(sl, task,
      file = paste0("data/model-", task$model_name, ".RData"))
