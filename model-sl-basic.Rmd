@@ -6,6 +6,9 @@ output: html_document
 ```{r setup, include=TRUE}
 knitr::opts_chunk$set(echo = TRUE)
 
+# Contains custom SuperLearner wrappers and screeners.
+source("R/sl-library.R")
+
 # TODO: consolidate these library calls into a separate function so that
 # we are consistent across Rmd files.
 library(ggplot2)
@@ -49,14 +52,16 @@ sl_lib = list(c("SL.xgboost_fast", "screen.corRank15"),
 ```{r superlearner}
 
 set.seed(3137033, "L'Ecuyer-CMRG")
-sl = SuperLearner::SuperLearner(Y = y, X = x,
-                  family = binomial(),
-                  verbose = TRUE,
-                  SL.library = sl_lib,
-                  # TODO: consider method = nnlogLik
-                  cvControl = SuperLearner.CV.control(V = 3L))
-                  # Re-run with 20 folds when we want to finalize our model.
-                  # cvControl = SuperLearner.CV.control(V = 20L))
+sl =
+  SuperLearner(Y = task$outcome,
+               X = task$data[, task$covariates],
+               family = binomial(),
+               verbose = TRUE,
+               SL.library = sl_lib,
+               # TODO: consider method = nnlogLik
+               cvControl = SuperLearner.CV.control(V = 3L))
+               # Re-run with 20 folds when we want to finalize our model.
+               # cvControl = SuperLearner.CV.control(V = 20L))
 sl
 
 # Save our results and our task for posterity.
