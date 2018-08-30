@@ -54,10 +54,17 @@ task = list(
   data = data,
   # Specify which covariates we can use for predicting the outcome
   # (these are only the column names, which can be indexed into task$data).
-  covariates = !names(data) %in% remove_cols,
+  covariates = names(data)[!names(data) %in% remove_cols],
   # Specify the outcome vector.
-  outcome = as.numeric(data[[var_outcome]] == "s")
+  outcome = as.integer(data[[var_outcome]] == "s")
 )
+
+# Review covariates.
+task$covariates
+
+# Review outcome distribution.
+table(task$outcome, useNA = "ifany")
+prop.table(table(task$outcome, useNA = "ifany"))
 ```
 
 ## Missing values
