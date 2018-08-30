@@ -92,6 +92,8 @@ startup = function(packages_cran = NULL,
 }
 
 # Specify defaults as attributes so that they can be extracted programmatically.
+# These packages could be installed manually by running:
+# install.packages(attr(startup, "packages_cran"))
 attr(startup, "packages_cran") = c(
   "devtools",
   "data.table",
@@ -116,6 +118,8 @@ attr(startup, "packages_cran") = c(
   "xgboost"
 )
 # These can be installed manually using devtools::install_github()
+# Or all at once:
+# devtools::install_github(attr(startup, "packages_github"))
 attr(startup, "packages_github") = c(
   # This is typically more up to date than the CRAN version.
   "ecpolley/SuperLearner",
