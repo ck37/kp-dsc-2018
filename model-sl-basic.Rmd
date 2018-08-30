@@ -63,6 +63,7 @@ sl =
                cvControl = SuperLearner.CV.control(V = 3L))
                # Re-run with 20 folds when we want to finalize our model.
                # cvControl = SuperLearner.CV.control(V = 20L))
+
 sl
 
 # Save our results and our task for posterity.
@@ -75,11 +76,11 @@ save(sl, task,
 ```{r review_model}
 # Review auc of the learners.
 # xgboost and ranger are both around 0.88, glmnet at 0.77
-ck37r::auc_table(sl, y = y)
+ck37r::auc_table(sl, y = task$outcome)
 # TODO: export table.
 
 # Plot ROC curve.
-ck37r::plot_roc(sl, y = y)
+ck37r::plot_roc(sl, y = task$outcome)
 ggsave(paste0("visuals/roc-", task$model_name, ".png"))
 
 ```
@@ -98,11 +99,14 @@ dim(test)
 test_df = test[, task$covariates]
 
 # Apply SuperLearner to generate predictions.
-predictions = predict(sl, test_df,
-                      # Only estimate the models that are used in the SL ensemble.
-                      onlySL = TRUE,
-                      # Allow multithreaded prediction to speed this up.
-                      num.threads = RhpcBLASctl::get_num_cores())$pred
+system.time({
+  predictions =
+    predict(sl, test_df,
+            # Only estimate the models that are used in the SL ensemble.
+            onlySL = TRUE,
+            # Allow multithreaded prediction to speed this up.
+            num.threads = RhpcBLASctl::get_num_cores())$pred
+})
 
 # Review prediction distribution.
 summary(predictions)
