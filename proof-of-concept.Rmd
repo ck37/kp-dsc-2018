@@ -40,6 +40,16 @@ tibble::glimpse(data)
 # No missing data - NAs at least.
 colMeans(is.na(data))
 
+#data that is missing is coded as -999, needs recoded
+table(is.na(data)) 
+head(data)
+data <- sapply(data, function(col){
+  col[col==-999] <- NA
+  col
+})
+table(is.na(data))
+head(data)
+
 # Review our outcome distribution - not imbalanced.
 table(data[[var_outcome]], useNA = "ifany")
 ```
