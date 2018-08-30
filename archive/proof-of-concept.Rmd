@@ -1,5 +1,5 @@
 ---
-title: "import data"
+title: "Proof of concept"
 output: html_document
 ---
 
