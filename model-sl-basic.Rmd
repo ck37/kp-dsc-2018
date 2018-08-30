@@ -1,5 +1,5 @@
 ---
-title: "Model"
+title: "Model: SL basic"
 output: html_document
 ---
 
@@ -25,6 +25,7 @@ library(ck37r)
 # File created in clean.Rmd
 load("data/clean.RData")
 
+# Define a model name specifically for this Rmd file.
 task$model_name = "sl-basic"
 ```
 
@@ -97,11 +98,14 @@ dim(test)
 test_df = test[, task$covariates]
 
 # Apply SuperLearner to generate predictions.
-predictions = predict(sl, test_df, onlySL = TRUE,
+predictions = predict(sl, test_df,
+                      # Only estimate the models that are used in the SL ensemble.
+                      onlySL = TRUE,
+                      # Allow multithreaded prediction to speed this up.
                       num.threads = RhpcBLASctl::get_num_cores())$pred
 
+# Review prediction distribution.
 summary(predictions)
-
 qplot(predictions) + theme_minimal()
 ggsave(paste0("visuals/test-hist-", task$model_name, ".png"))
 
@@ -109,8 +113,10 @@ ggsave(paste0("visuals/test-hist-", task$model_name, ".png"))
 export = data.frame(EventId = test$eventid, Label = predictions)
 
 # Convert probability prediction to a class prediction.
+# TODO: run optimal threshold analysis to decide best probability threshold.
 export$Label = ifelse(export$Label > 0.5, "s", "b")
 
+# Review predicted class labels.
 table(export$Label)
 prop.table(table(export$Label))
 
