@@ -1,0 +1,82 @@
+---
+title: "Clean raw data"
+output: html_document
+---
+
+```{r setup, include=TRUE}
+knitr::opts_chunk$set(echo = TRUE)
+ 
+# Contains custom SuperLearner wrappers and screeners.
+source("R/sl-library.R")
+
+# TODO: consolidate these library calls into a separate function so that
+# we are consistent across Rmd files.
+library(ggplot2)
+library(SuperLearner)
+library(data.table)
+library(xgboost)
+library(glmnet)
+library(ranger)
+library(doParallel)
+# Install this version, the CRAN version is very old sadly --
+# devtools::install_github("ck37/ck37r")
+library(ck37r)
+```
+
+```{r import_data}
+
+data = data.table::fread("data-raw/train.csv")
+dim(data)
+
+names(data) = tolower(names(data))
+
+# Review classes in our dataset.
+table(sapply(data, class))
+sapply(data, class)
+
+```
+
+```{r data_prep}
+# Define our outcome variable.
+var_outcome = "label"
+
+# Specify which variables we don't want to use for prediction.
+remove_cols = c(var_outcome,
+                # Simply notes that this is all training data.
+                "kaggleset",
+                # TODO: figure out what these columns mean.
+                "eventid", "kaggleweight", "weight")
+
+# Create a list to save our outcome, data, and covariates.
+# This can then be used for EDA, modeling, etc.
+task = list(
+  # Save our primary dataset.
+  data = data,
+  # Specify which covariates we can use for predicting the outcome
+  # (these are only the column names, which can be indexed into task$data).
+  covariates = !names(data) %in% remove_cols,
+  # Specify the outcome vector.
+  outcome = as.numeric(data[[var_outcome]] == "s")
+)
+```
+
+## Missing values
+
+```{r missing_values}
+# TODO:
+# Replace -999 values with NA for all of our covariates.
+
+# Add missingness indicators and impute missing values (e.g. to median).
+# See ck37r::impute_missing_values()
+
+# Add missingness indicators to task$covariates
+```
+
+## Save results
+
+```{r save_results}
+
+save(task,
+     # TODO: also save imputation object for future reference.
+     file = "data/clean.RData")
+```
