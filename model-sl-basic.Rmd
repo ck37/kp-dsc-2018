@@ -113,7 +113,8 @@ summary(predictions)
 qplot(predictions) + theme_minimal()
 ggsave(paste0("visuals/test-hist-", task$model_name, ".png"))
 
-# Currently guessing that $eventid is the primary id for each observation.
+# Create a dataframe that contains just what we need to submit an entry.
+# $eventid is the primary id for each observation.
 export = data.frame(EventId = test$eventid, Label = predictions)
 
 # Convert probability prediction to a class prediction.
