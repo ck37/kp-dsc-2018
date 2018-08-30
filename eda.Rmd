@@ -19,7 +19,9 @@ library(doParallel)
 # devtools::install_github("ck37/ck37r")
 library(ck37r)
 
+# File created in clean.Rmd
 load("data/clean.RData")
+
 names(task)
 task$covariates
 ```
