@@ -6,21 +6,12 @@ output: html_document
 ```{r setup, include=TRUE}
 knitr::opts_chunk$set(echo = TRUE)
 
-# Contains custom SuperLearner wrappers and screeners.
-source("R/sl-library.R")
-
-# TODO: consolidate these library calls into a separate function so that
-# we are consistent across Rmd files.
-library(ggplot2)
-library(SuperLearner)
-library(data.table)
-library(xgboost)
-library(glmnet)
-library(ranger)
-library(doParallel)
-# Install this version, the CRAN version is very old sadly --
-# devtools::install_github("ck37/ck37r")
-library(ck37r)
+# Load an initial pair of startup functions.
+source("R/_startup.R")
+# Load necessary libraries; set auto_install = TRUE to try to install any needed packages.
+startup(auto_install = FALSE, verbose = FALSE)
+# Load all .R files in the R/ subdirectory.
+ck37r::load_all_code("R", verbose = TRUE)
 
 # File created in clean.Rmd
 load("data/clean.RData")
