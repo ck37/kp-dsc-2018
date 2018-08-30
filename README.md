@@ -13,6 +13,10 @@
     devtools::install_github(attr(startup, "packages_github"))
     ```
   * If you run into errors, you may need to install a few packages manually, e.g. h2o.
-  * You also may want to run Session -> Restart R if you get any weird messages about corrupt files.
+  * You also may want to run Session -> Restart R if you get any weird messages about "lazy-load database something.rdb is corrupt".
 
+## Analyze
 
+* Run or knit `clean.Rmd` to import the raw data and generate `data/clean.RData`.
+* Run or knit `eda.Rmd` to conduct exploratory data analysis.
+* Run or knit one of the model files, such as `model-sl-basic.Rmd` to build a model and generate a submission export.
