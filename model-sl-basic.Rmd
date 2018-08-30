@@ -1,0 +1,132 @@
+---
+title: "Model: SL basic"
+output: html_document
+---
+
+```{r setup, include=TRUE}
+knitr::opts_chunk$set(echo = TRUE)
+
+# Contains custom SuperLearner wrappers and screeners.
+source("R/sl-library.R")
+
+# TODO: consolidate these library calls into a separate function so that
+# we are consistent across Rmd files.
+library(ggplot2)
+library(SuperLearner)
+library(data.table)
+library(xgboost)
+library(glmnet)
+library(ranger)
+library(doParallel)
+# Install this version, the CRAN version is very old sadly --
+# devtools::install_github("ck37/ck37r")
+library(ck37r)
+
+# File created in clean.Rmd
+load("data/clean.RData")
+
+# Define a model name specifically for this Rmd file.
+task$model_name = "sl-basic"
+```
+
+## Define estimators
+
+```{r define_estimators}
+
+# This will select only the top 5 covariates based on correlation with the outcome.
+screen.corRank15 = function(...) screen.corRank2(..., rank = 15)
+
+# Setup parallel backend for glmnet_fast.
+doParallel::registerDoParallel(cores = RhpcBLASctl::get_num_cores())
+
+# Add screeners so that it's not as slow to estimate.
+# TODO: test wider numbers of covariates, e.g. 15 or all.
+# TODO: grid search on xgboost hyperparameters.
+sl_lib = list(c("SL.xgboost_fast", "screen.corRank15"),
+              c("SL.ranger_fast", "screen.corRank15"),
+              c("SL.glmnet_fast", "screen.corRank15"),
+                "SL.mean")
+```
+
+## Run estimation
+
+```{r superlearner}
+
+set.seed(3137033, "L'Ecuyer-CMRG")
+sl =
+  SuperLearner(Y = task$outcome,
+               X = task$data[, task$covariates],
+               family = binomial(),
+               verbose = TRUE,
+               SL.library = sl_lib,
+               # TODO: consider method = nnlogLik
+               cvControl = SuperLearner.CV.control(V = 3L))
+               # Re-run with 20 folds when we want to finalize our model.
+               # cvControl = SuperLearner.CV.control(V = 20L))
+
+sl
+
+# Save our results and our task for posterity.
+save(sl, task,
+     file = paste0("data/model-", task$model_name, ".RData"))
+```
+
+## Review model
+
+```{r review_model}
+# Review auc of the learners.
+# xgboost and ranger are both around 0.88, glmnet at 0.77
+ck37r::auc_table(sl, y = task$outcome)
+# TODO: export table.
+
+# Plot ROC curve.
+ck37r::plot_roc(sl, y = task$outcome)
+ggsave(paste0("visuals/roc-", task$model_name, ".png"))
+
+```
+
+## Predict on test
+
+TODO: convert more of this to a general function so that we can use across Rmd files.
+
+```{r test_prediction}
+test = data.table::fread("data-raw/test.csv", data.table = FALSE)
+dim(test)
+
+(names(test) = tolower(names(test)))
+
+# Restrict to columns that we want.
+test_df = test[, task$covariates]
+
+# Apply SuperLearner to generate predictions.
+system.time({
+  predictions =
+    predict(sl, test_df,
+            # Only estimate the models that are used in the SL ensemble.
+            onlySL = TRUE,
+            # Allow multithreaded prediction to speed this up.
+            num.threads = RhpcBLASctl::get_num_cores())$pred
+})
+
+# Review prediction distribution.
+summary(predictions)
+qplot(predictions) + theme_minimal()
+ggsave(paste0("visuals/test-hist-", task$model_name, ".png"))
+
+# Create a dataframe that contains just what we need to submit an entry.
+# $eventid is the primary id for each observation.
+export = data.frame(EventId = test$eventid, Label = predictions)
+
+# Convert probability prediction to a class prediction.
+# TODO: run optimal threshold analysis to decide best probability threshold.
+export$Label = ifelse(export$Label > 0.5, "s", "b")
+
+# Review predicted class labels.
+table(export$Label)
+prop.table(table(export$Label))
+
+# Generate a csv file to upload to competition submission page.
+rio::export(export,
+            file = paste0("exports/submission-", task$model_name, ".csv"))
+
+```

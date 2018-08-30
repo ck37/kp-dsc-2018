@@ -1,0 +1,51 @@
+---
+title: "Exploratory data analysis"
+output: html_document
+---
+
+```{r setup, include=TRUE}
+knitr::opts_chunk$set(echo = TRUE)
+
+# TODO: consolidate these library calls into a separate function so that
+# we are consistent across Rmd files.
+library(ggplot2)
+library(SuperLearner)
+library(data.table)
+library(xgboost)
+library(glmnet)
+library(ranger)
+library(doParallel)
+# Install this version, the CRAN version is very old sadly --
+# devtools::install_github("ck37/ck37r")
+library(ck37r)
+
+# File created in clean.Rmd
+load("data/clean.RData")
+
+names(task)
+task$covariates
+```
+
+## Correlation analysis
+
+```{r eda_corr}
+corr_data = cbind(task$data[, task$covariates], y = task$outcome)
+corr = ck37r::vim_corr(task$covariates, corr_data, "y", bootse = FALSE)
+
+# Look at the correlation of covariates with the outcome.
+# Top 20 are incredibly significant.
+corr
+```
+
+## OLS analysis
+
+```{r eda_reg}
+reg = lm(y ~ ., data = x)
+
+# Adj. R-sqr of 0.2464
+summary(reg)
+```
+
+## tSNE
+
+## UMAP
