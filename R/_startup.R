@@ -114,7 +114,7 @@ attr(startup, "packages_cran") = c(
   "ranger",
   "xgboost"
 )
-
+# These can be installed manually using devtools::install_github()
 attr(startup, "packages_github") = c(
   # This is typically more up to date than the CRAN version.
   "ecpolley/SuperLearner",
