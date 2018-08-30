@@ -25,7 +25,8 @@ library(ck37r)
 
 ```{r import_data}
 
-data = data.table::fread("data-raw/train.csv")
+# Import as a data.frame rather than a data.table - avoids extra complication.
+data = data.table::fread("data-raw/train.csv", data.table = FALSE)
 dim(data)
 
 names(data) = tolower(names(data))
