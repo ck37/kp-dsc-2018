@@ -93,6 +93,7 @@ startup = function(packages_cran = NULL,
 
 # Specify defaults as attributes so that they can be extracted programmatically.
 attr(startup, "packages_cran") = c(
+  "devtools",
   "data.table",
   "magrittr", # For %$%
   "rio",
