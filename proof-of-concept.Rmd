@@ -77,7 +77,7 @@ summary(reg)
 ```{r model_sl}
 
 # This will select only the top 5 covariates based on correlation with the outcome.
-screen.corRank5 = function(...) screen.corRank2(..., rank = 5)
+screen.corRank15 = function(...) screen.corRank2(..., rank = 15)
 
 # Setup parallel backend for glmnet_fast.
 doParallel::registerDoParallel(cores = RhpcBLASctl::get_num_cores())
@@ -85,9 +85,9 @@ doParallel::registerDoParallel(cores = RhpcBLASctl::get_num_cores())
 # Add screeners so that it's not as slow to estimate.
 # TODO: test wider numbers of covariates, e.g. 15 or all.
 # TODO: grid search on xgboost hyperparameters.
-sl_lib = list(c("SL.xgboost_fast", "screen.corRank5"),
-              c("SL.ranger_fast", "screen.corRank5"),
-              c("SL.glmnet_fast", "screen.corRank5"),
+sl_lib = list(c("SL.xgboost_fast", "screen.corRank15"),
+              c("SL.ranger_fast", "screen.corRank15"),
+              c("SL.glmnet_fast", "screen.corRank15"),
                 "SL.mean")
 
 set.seed(3137033, "L'Ecuyer-CMRG")
