@@ -62,16 +62,22 @@ prop.table(table(task$outcome, useNA = "ifany"))
 ## Missing values
 
 ```{r missing_values}
-# Replace -999 values with NA for all of our covariates.
+sapply(data, class)
 table(is.na(data)) 
 head(data)
-data <- as.data.frame(sapply(data, function(col){
-  col[col==-999] <- NA
+
+colMeans(is.na(data))
+
+# Replace -999 values with NA for all of our covariates.
+data[, task$covariates] <- lapply(data[, task$covariates], function(col) {
+  col[col == -999] <- NA
   col
-}))
+})
 table(is.na(data))
+colMeans(is.na(data[, task$covariates]))
 head(data)
 class(data)
+sapply(data, class)
 
 # Add missingness indicators and impute missing values to median.
 impute <- ck37r::impute_missing_values(data, type = "standard", verbose = TRUE)
