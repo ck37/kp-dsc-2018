@@ -74,6 +74,7 @@ sl =
 
 sl
 
+# 99 mins on Benten
 cat("Execution time:", round(sl$times$everything["elapsed"] / 60, 1), "minutes.\n")
 
 # Save our results and our task for posterity.
@@ -105,21 +106,28 @@ dim(test)
 (names(test) = tolower(names(test)))
 
 # Restrict to columns that we want.
-test_df = test[, task$covariates]
+test_df = test[, names(test) %in% task$covariates]
 
 # Replace -999 values with NA for all of our covariates.
 # TODO: convert to a function that we re-use code between model.Rmd and clean.Rmd.
-test_df[, task$covariates] <- lapply(test_df[, task$covariates], function(col) {
+test_df[, names(test_df)] <- lapply(test_df, function(col) {
   col[col == -999] <- NA
   col
 })
 
+colMeans(is.na(test_df))
+
 # Impute missing values.
 # TODO: should use imputation medians from the training data rather the test data.
-impute_test = ck37r::impute_missing_values(test_df[, task$covariates], verbose = TRUE)
-test_df[, task$covariates] = impute_test$data
+impute_test = ck37r::impute_missing_values(test_df, verbose = TRUE)
+test_df = impute_test$data
+
+# Confirm all of our covariates are right.
+all(names(test_df) %in% task$covariates)
+all(task$covariates %in% names(test_df))
 
 # Apply SuperLearner to generate predictions.
+# Takes 42 seconds
 system.time({
   predictions =
     predict(sl, test_df,
@@ -147,6 +155,7 @@ table(export$Label)
 prop.table(table(export$Label))
 
 # Generate a csv file to upload to competition submission page.
+# TODO: add date+time to filename?
 rio::export(export,
             file = paste0("exports/submission-", task$model_name, ".csv"))
 
