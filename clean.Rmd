@@ -67,26 +67,23 @@ prop.table(table(task$outcome, useNA = "ifany"))
 #data that is missing is coded as -999, needs recoded
 table(is.na(data)) 
 head(data)
-data <- sapply(data, function(col){
+data <- as.data.frame(sapply(data, function(col){
   col[col==-999] <- NA
   col
-})
+}))
 table(is.na(data))
 head(data)
+class(data)
 
 # Add missingness indicators and impute missing values (e.g. to median).
+#add in indicators 
 # See ck37r::impute_missing_values()
 
-dat2 <- sapply(data, function(x){
-    if(is.numeric(x)){
-            x[is.na(x)] <- median(x, na.rm = TRUE)
-        } else {
-            x
-        }})
+impute <- ck37r::impute_missing_values(data, type="standard", verbose=TRUE)
 
-print(dat2[1:30])
+task$data <- impute$data
 
-data[1:30]
+task$covariates <- c(task$covariates, "miss_der_mass_mmc", "miss_der_deltaeta_jet_jet", "miss_pri_jet_leading_pt")
 # Add missingness indicators to task$covariates
 ```
 
