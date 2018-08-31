@@ -62,9 +62,7 @@ prop.table(table(task$outcome, useNA = "ifany"))
 ## Missing values
 
 ```{r missing_values}
-# TODO:
 # Replace -999 values with NA for all of our covariates.
-#data that is missing is coded as -999, needs recoded
 table(is.na(data)) 
 head(data)
 data <- as.data.frame(sapply(data, function(col){
@@ -75,23 +73,24 @@ table(is.na(data))
 head(data)
 class(data)
 
-# Add missingness indicators and impute missing values (e.g. to median).
-#add in indicators 
-# See ck37r::impute_missing_values()
-
-impute <- ck37r::impute_missing_values(data, type="standard", verbose=TRUE)
+# Add missingness indicators and impute missing values to median.
+impute <- ck37r::impute_missing_values(data, type = "standard", verbose = TRUE)
 
 task$data <- impute$data
 
-task$covariates <- c(task$covariates, "miss_der_mass_mmc", "miss_der_deltaeta_jet_jet", "miss_pri_jet_leading_pt")
+# Clear out this $data element so that we don't have two copies of the data.
+impute$data = NULL
+
 # Add missingness indicators to task$covariates
+task$covariates <- c(task$covariates, "miss_der_mass_mmc", "miss_der_deltaeta_jet_jet", "miss_pri_jet_leading_pt")
+
 ```
 
 ## Save results
 
 ```{r save_results}
 
-save(task,
-     # TODO: also save imputation object for future reference.
+# Save imputation object for future reference.
+save(task, impute,
      file = "data/clean.RData")
 ```
