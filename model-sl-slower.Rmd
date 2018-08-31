@@ -41,16 +41,22 @@ xgb_grid$names
 
 # Setup parallel backend for glmnet_fast.
 doParallel::registerDoParallel(cores = RhpcBLASctl::get_num_cores())
+foreach::getDoParWorkers()
+
+bartMachine::set_bart_machine_num_cores(RhpcBLASctl::get_num_cores())
+bartMachine::bart_machine_num_cores()
 
 # Add screeners so that it's not as slow to estimate.
 # TODO: test wider numbers of covariates, e.g. 15 or all.
 # TODO: grid search on xgboost hyperparameters.
 sl_lib =
-  c(lapply(xgb_grid$names, function(name) c(name, "screen.corRank15", "screen.corRank25")),
-    list(c("SL.xgboost_fast", "screen.corRank15", "screen.corRank25"),
-         c("SL.ranger_fast", "screen.corRank15", "screen.corRank25"),
-         c("SL.ranger_fast", "screen.corRank15", "screen.corRank25"),
-         c("SL.glmnet_fast", "screen.corRank15", "screen.corRank25"),
+  c(lapply(xgb_grid$names, function(name) c(name, "All", "screen.corRank25")),
+    list(c("SL.xgboost_fast", "All", "screen.corRank25"),
+         c("SL.bartMachine2", "All", "screen.corRank25"),
+         c("SL.xgboost_cv", "All", "screen.corRank25"),
+         c("SL.ranger_fast", "All", "screen.corRank25"),
+         c("SL.glmnet_fast", "All", "screen.corRank25"),
+         # TODO: add ck37r::SL.h2o_auto
          "SL.mean"))
 
 ```
@@ -92,6 +98,16 @@ ck37r::auc_table(sl, y = task$outcome)
 # Plot ROC curve.
 ck37r::plot_roc(sl, y = task$outcome)
 ggsave(paste0("visuals/roc-", task$model_name, ".png"))
+
+
+labels = as.numeric(sl$SL.predict > 0.5, 1, 0)
+table(labels, task$outcome, useNA = "ifany")
+# 88% internal estimate, but 83% based on leaderboard submission.
+(accuracy = mean(labels == task$outcome))
+
+# TODO: calculate the class label based AUC using the cross-validation folds rather than resubstitution.
+
+# TODO: review OOB curve for ranger model.
 
 ```
 
