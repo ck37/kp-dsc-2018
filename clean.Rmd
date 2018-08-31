@@ -94,27 +94,51 @@ task$data <- impute$data
 impute$data = NULL
 
 # Add missingness indicators to task$covariates
-task$covariates <- c(task$covariates, "miss_der_mass_mmc", "miss_der_deltaeta_jet_jet", "miss_pri_jet_leading_pt")
+(task$covariates <- c(task$covariates, impute$indicators_added))
+
+# Confirm that all of our covariates exist in the data.
+all(task$covariates %in% names(task$data))
 
 ```
 
 ## Convert factors to indicators
 
 ```{r}
+
+sapply(task$data, class)
+
 # This will only apply to $pri_jet_num
 # We need to do the same step on the testing data.
 factors = ck37r::factors_to_indicators(data, predictors = task$covariates, verbose = TRUE)
 names(factors)
-task$data = factors$data
+
+# This is dropping the missingness indicators for some reason - appears to be
+# a bug in factors_to_indicators - need to investigate.
+names(factors$data)
+factors$factor_names
+
+# TODO: this as.vector shouldn't be needed but $factor_names is a column matrix
+# (erroneously).
+task$data = cbind(task$data, factors$data[, as.vector(factors$factor_names)])
+names(task$data)
+
+# Update our covariate list to include the 3 new indicator columns.
+(task$covariates = c(task$covariates, as.vector(factors$factor_names)))
+
 # Clear out this extra copy of the dataframe to save memory & storage size.
 factors$data = NULL
-# Update our covariate list to include the 3 new indicator columns.
-task$covariates = factors$predictors
+
+# Remove $pri_jet_num now that it exists as indicators.
+task$data$pri_jet_num = NULL
+(task$covariates = setdiff(task$covariates, "pri_jet_num"))
 ```
 
 ## Save results
 
 ```{r save_results}
+
+# Confirm that all of our covariates exist in our data.
+stopifnot(all(task$covariates %in% names(task$data)))
 
 # Save imputation and factor objects for future reference and use on test dataset.
 save(task, impute, factors,
