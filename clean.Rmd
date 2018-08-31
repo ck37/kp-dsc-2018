@@ -26,6 +26,12 @@ names(data) = tolower(names(data))
 table(sapply(data, class))
 sapply(data, class)
 
+# Review the number of unique values in each column.
+sapply(data, function(col) { length(unique(col)) })
+
+# pri_jet_num has only 4 so let's convert it to a factor.
+data$pri_jet_num = factor(data$pri_jet_num)
+table(data$pri_jet_num)
 ```
 
 ```{r data_prep}
@@ -92,11 +98,25 @@ task$covariates <- c(task$covariates, "miss_der_mass_mmc", "miss_der_deltaeta_je
 
 ```
 
+## Convert factors to indicators
+
+```{r}
+# This will only apply to $pri_jet_num
+# We need to do the same step on the testing data.
+factors = ck37r::factors_to_indicators(data, predictors = task$covariates, verbose = TRUE)
+names(factors)
+task$data = factors$data
+# Clear out this extra copy of the dataframe to save memory & storage size.
+factors$data = NULL
+# Update our covariate list to include the 3 new indicator columns.
+task$covariates = factors$predictors
+```
+
 ## Save results
 
 ```{r save_results}
 
-# Save imputation object for future reference.
-save(task, impute,
+# Save imputation and factor objects for future reference and use on test dataset.
+save(task, impute, factors,
      file = "data/clean.RData")
 ```
