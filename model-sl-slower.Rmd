@@ -9,7 +9,10 @@ knitr::opts_chunk$set(echo = TRUE)
 # Load an initial pair of startup functions.
 source("R/_startup.R")
 # Load necessary libraries; set auto_install = TRUE to try to install any needed packages.
-startup(auto_install = FALSE, verbose = FALSE)
+startup(auto_install = FALSE, verbose = FALSE,
+        # We are assuming this model is being run on a server with 128GB+ RAM.
+        # TODO: this is not enough memory - need to increase.
+        java_mem = "120g")
 # Load all .R files in the R/ subdirectory.
 ck37r::load_all_code("R", verbose = TRUE)
 
@@ -46,14 +49,16 @@ foreach::getDoParWorkers()
 bartMachine::set_bart_machine_num_cores(RhpcBLASctl::get_num_cores())
 bartMachine::bart_machine_num_cores()
 
-# Add screeners so that it's not as slow to estimate.
-# TODO: test wider numbers of covariates, e.g. 15 or all.
-# TODO: grid search on xgboost hyperparameters.
+# Confirm that we have 120GB+ allocated to rJAva.
+invisible(ck37r::get_java_memory(verbose = TRUE))
 sl_lib =
   c(lapply(xgb_grid$names, function(name) c(name, "All", "screen.corRank25")),
     list(c("SL.xgboost_fast", "All", "screen.corRank25"),
          c("SL.bartMachine2", "All", "screen.corRank25"),
-         c("SL.xgboost_cv", "All", "screen.corRank25"),
+         # Broken, need to fix:
+         # Error in check.booster.params(params, ...) : 
+  # Same parameters in 'params' and in the call are not allowed. Please check your 'params' list.
+ #        c("SL.xgboost_cv", "All", "screen.corRank25"),
          c("SL.ranger_fast", "All", "screen.corRank25"),
          c("SL.glmnet_fast", "All", "screen.corRank25"),
          # TODO: add ck37r::SL.h2o_auto
@@ -80,7 +85,7 @@ sl =
 
 sl
 
-# 99 mins on Benten
+# 743 mins on Benten
 cat("Execution time:", round(sl$times$everything["elapsed"] / 60, 1), "minutes.\n")
 
 # Save our results and our task for posterity.
@@ -96,14 +101,20 @@ ck37r::auc_table(sl, y = task$outcome)
 # TODO: export table.
 
 # Plot ROC curve.
+# TODO: fix this, currently broken.
 ck37r::plot_roc(sl, y = task$outcome)
 ggsave(paste0("visuals/roc-", task$model_name, ".png"))
 
+# Plot predictions.
+qplot(sl$SL.predict) + theme_minimal()
+ggsave(paste0("visuals/training-predictions-", task$model_name, ".png"))
 
 labels = as.numeric(sl$SL.predict > 0.5, 1, 0)
 table(labels, task$outcome, useNA = "ifany")
 # 88% internal estimate, but 83% based on leaderboard submission.
 (accuracy = mean(labels == task$outcome))
+
+# TODO: identify optimal threshold.
 
 # TODO: calculate the class label based AUC using the cross-validation folds rather than resubstitution.
 
