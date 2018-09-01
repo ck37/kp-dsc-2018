@@ -136,7 +136,7 @@ all(task$covariates %in% names(task$data))
 
 ## Convert factors to indicators
 
-```{r}
+```{r factors_to_indicators}
 
 sapply(task$data, class)
 
