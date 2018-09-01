@@ -5,7 +5,7 @@ output: html_document
 
 ```{r setup, include=TRUE}
 knitr::opts_chunk$set(echo = TRUE)
-
+rm(list=ls())
 # Load an initial pair of startup functions.
 source("R/_startup.R")
 # Load necessary libraries; set auto_install = TRUE to try to install any needed packages.
@@ -61,8 +61,10 @@ prop.table(label_table)
 remove_cols = c(var_outcome,
                 # Simply notes that this is all training data.
                 "kaggleset",
-                # TODO: figure out what these columns mean.
                 "eventid", "kaggleweight", "weight")
+#NOTE: weight and kaggleweight shouldn't be used to build the classifier, they're sampling weights that were used to over-sample the event data (because the outcome is rare). eventid is the unique row identifier.
+
+
 
 # Create a list to save our outcome, data, and covariates.
 # This can then be used for EDA, modeling, etc.
