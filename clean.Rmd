@@ -7,6 +7,7 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 
 # Put in an if (FALSE) block so that it won't run automatically.
+# See https://www.tidyverse.org/articles/2017/12/workflow-vs-script/
 if (FALSE) {
   # Run this line manually if desired.
   rm(list = ls())
