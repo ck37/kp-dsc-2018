@@ -133,7 +133,11 @@ dim(test)
 (names(test) = tolower(names(test)))
 
 # Restrict to columns that we want.
-test_df = test[, names(test) %in% task$covariates]
+#test_df = test[, names(test) %in% task$covariates]
+test_df = test
+
+# Convert pri_jet_num to a factor.
+test$pri_jet_num = as.factor(test$pri_jet_num)
 
 # Replace -999 values with NA for all of our covariates.
 # TODO: convert to a function that we re-use code between model.Rmd and clean.Rmd.
@@ -142,12 +146,28 @@ test_df[, names(test_df)] <- lapply(test_df, function(col) {
   col
 })
 
+sapply(test_df, class)
+
 colMeans(is.na(test_df))
 
 # Impute missing values.
 # TODO: should use imputation medians from the training data rather the test data.
 impute_test = ck37r::impute_missing_values(test_df, verbose = TRUE)
 test_df = impute_test$data
+
+names(test_df)
+sapply(test_df, class)
+
+# Convert factors to indicators.
+factors = ck37r::factors_to_indicators(test_df, verbose = TRUE)
+
+test_df = factors$data
+
+# Restrict to the covariates used for prediction.
+test_df = test_df[, task$covariates]
+
+# This should return character(0)
+task$covariates[!task$covariates %in% names(test_df)]
 
 # Confirm all of our covariates are right.
 all(names(test_df) %in% task$covariates)
