@@ -174,11 +174,23 @@ cutpoints[which.max(results$diff)]
 cutpoints[which.max(results$auc)]
 
 summary(results)
+mean(task$outcome)
 
-qplot(results$cutpoint, results$auc) + theme_minimal() +
+# TODO: remove unnecessary legend, label vertical lines.
+qplot(results$cutpoint, results$auc, alpha = 0.5) +
+  theme_minimal() +
   scale_x_continuous(limits = c(0.1, 0.6)) +
-  scale_y_continuous(limits = c(0.5, 1)) + 
-  geom_smooth()
+  scale_y_continuous(limits = c(0.5, 0.85)) + 
+  geom_smooth() + 
+  geom_vline(xintercept = mean(task$outcome), color = "red", alpha = 0.5) +
+  #geom_vline(xintercept = 0.35, color = "red", alpha = 0.5) +
+  #geom_vline(xintercept = 0.34, color = "purple", alpha = 0.5) +
+  #geom_vline(xintercept = 0.32, color = "darkgreen", alpha = 0.5) +
+  #geom_vline(xintercept = 0.27, color = "orange") +
+  geom_vline(xintercept = 0.5, color = "gray50") +
+  labs(x = "Cutpoint", y = "Estimated AUC")
+
+ggsave(paste0("visuals/cutpoint-analysis-", task$model_name, ".png"))
 
 # Create a dataframe that contains just what we need to submit an entry.
 # $eventid is the primary id for each observation.
@@ -186,7 +198,8 @@ export = data.frame(EventId = task$id_test, Label = predictions)
 
 # Convert probability prediction to a class prediction.
 # TODO: run optimal threshold analysis to decide best probability threshold.
-threshold = 0.33
+#threshold = 0.35
+(threshold = mean(task$outcome))
 export$Label = ifelse(export$Label > threshold, "s", "b")
 
 # Review predicted class labels.
