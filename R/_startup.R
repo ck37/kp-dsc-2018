@@ -56,6 +56,9 @@ load_all_packages =
         invisible(sapply(github_names, require, character.only = T))
       }
 
+      # To facilitate installation on KP systems.
+      httr::set_config(httr::config(ssl_verifypeer = 0L))
+
       # This part clearly requires that the ck37r package was already installed,
       # either via packages_cran or packages_github.
       ck37r::load_packages(packages_cran, auto_install, update, verbose = verbose)
