@@ -165,16 +165,72 @@ factors$data = NULL
 # Remove $pri_jet_num now that it exists as indicators.
 task$data$pri_jet_num = NULL
 (task$covariates = setdiff(task$covariates, "pri_jet_num"))
+
+# Confirm that all of our covariates exist in our training data.
+stopifnot(all(task$covariates %in% names(task$data)))
+```
+
+## Clean test
+
+```{r clean_test}
+test = data.table::fread("data-raw/test.csv", data.table = FALSE)
+dim(test)
+
+(names(test) = tolower(names(test)))
+
+# Restrict to columns that we want.
+#test_df = test[, names(test) %in% task$covariates]
+test_df = test
+
+# Convert pri_jet_num to a factor.
+test_df$pri_jet_num = as.factor(test_df$pri_jet_num)
+
+# Replace -999 values with NA for all of our covariates.
+# TODO: convert to a function that we re-use code between model.Rmd and clean.Rmd.
+test_df[, names(test_df)] <- lapply(test_df, function(col) {
+  col[col == -999] <- NA
+  col
+})
+
+sapply(test_df, class)
+
+# Review missing proportions.
+colMeans(is.na(test_df))
+
+# Impute missing values.
+# TODO: should use imputation medians from the training data rather the test data.
+impute_test = ck37r::impute_missing_values(test_df, verbose = TRUE)
+test_df = impute_test$data
+
+names(test_df)
+sapply(test_df, class)
+
+# Convert factors to indicators.
+factors = ck37r::factors_to_indicators(test_df, verbose = TRUE)
+
+test_df = factors$data
+
+# Restrict to the covariates used for prediction.
+test_df = test_df[, task$covariates]
+
+# This should return character(0)
+task$covariates[!task$covariates %in% names(test_df)]
+
+# Confirm all of our covariates are right.
+all(names(test_df) %in% task$covariates)
+all(task$covariates %in% names(test_df))
+
+task$data_test = test_df
+task$id_test = test$eventid
 ```
 
 ## Save results
 
 ```{r save_results}
+# Review elments of our task object.
+names(task)
 
-# Confirm that all of our covariates exist in our data.
-stopifnot(all(task$covariates %in% names(task$data)))
-
-# Save imputation and factor objects for future reference and use on test dataset.
+# Save imputation and factor objects for future reference
 save(task, impute, factors,
      file = "data/clean.RData")
 ```
