@@ -124,6 +124,8 @@ table(labels, task$outcome, useNA = "ifany")
 
 ## Predict on test
 
+TODO: convert more of this code to functions so that it isn't duplicated across model files.
+
 ```{r test_prediction}
 
 # Apply SuperLearner to generate predictions.
