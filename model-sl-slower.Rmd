@@ -129,20 +129,56 @@ TODO: convert more of this code to functions so that it isn't duplicated across 
 ```{r test_prediction}
 
 # Apply SuperLearner to generate predictions.
-# Takes 42 seconds
+# Takes 1 - 4 minutes.
 system.time({
   predictions =
     predict(sl, task$data_test,
             # Only estimate the models that are used in the SL ensemble.
             onlySL = TRUE,
             # Allow multithreaded prediction to speed this up.
-            num.threads = RhpcBLASctl::get_num_cores())$pred
+            num.threads = RhpcBLASctl::get_num_cores())
 })
+
+predictions = predictions$pred[, 1]
 
 # Review prediction distribution.
 summary(predictions)
-qplot(predictions) + theme_minimal()
+qplot(predictions, bins = 100L) + theme_minimal()
 ggsave(paste0("visuals/test-hist-", task$model_name, ".png"))
+
+cutpoints = unique(sl$SL.predict)
+
+cutpoints = seq(0, 1, by = 0.001)
+results = data.frame(matrix(NA, nrow = length(cutpoints), ncol = 6))
+colnames(results) = c("cutpoint", "tpr", "fpr", "diff", "accuracy", "auc")
+
+# Calculate true positive rate and false positive rate for each possible cutpoint.
+for (cutpoint_i in seq_along(cutpoints)) {
+  point = cutpoints[cutpoint_i]
+  labels = as.integer(sl$SL.predict > point)
+  accuracy = mean(labels == task$outcome)
+  tpr = mean(labels[task$outcome == 1])
+  fpr = mean(task$outcome == 0 & labels == 1)
+  # Quick way to estimate AUC, there may be a better formula.
+  auc = mean(sample(labels[task$outcome == 1], 5000, replace = TRUE) >
+             sample(labels[task$outcome == 0], 5000, replace = TRUE))
+  results[cutpoint_i, ] = list(point, tpr, fpr, tpr - fpr, accuracy, auc)
+}
+
+results
+qplot(results$fpr, results$tpr)
+
+# 0.277
+cutpoints[which.max(results$diff)]
+# 0.31
+cutpoints[which.max(results$auc)]
+
+summary(results)
+
+qplot(results$cutpoint, results$auc) + theme_minimal() +
+  scale_x_continuous(limits = c(0.1, 0.6)) +
+  scale_y_continuous(limits = c(0.5, 1)) + 
+  geom_smooth()
 
 # Create a dataframe that contains just what we need to submit an entry.
 # $eventid is the primary id for each observation.
@@ -150,7 +186,8 @@ export = data.frame(EventId = task$id_test, Label = predictions)
 
 # Convert probability prediction to a class prediction.
 # TODO: run optimal threshold analysis to decide best probability threshold.
-export$Label = ifelse(export$Label > 0.5, "s", "b")
+threshold = 0.33
+export$Label = ifelse(export$Label > threshold, "s", "b")
 
 # Review predicted class labels.
 table(export$Label)
@@ -158,7 +195,9 @@ prop.table(table(export$Label))
 
 # Generate a csv file to upload to competition submission page.
 # TODO: add date+time to filename?
+
 rio::export(export,
-            file = paste0("exports/submission-", task$model_name, ".csv"))
+            file = paste0("exports/submission-", task$model_name, "-",
+                          format(Sys.time(), "%m-%d"), ".csv"))
 
 ```
