@@ -103,7 +103,7 @@ head(data)
 colMeans(is.na(data))
 
 # Replace -999 values with NA for all of our covariates.
-task$data[, task$covariates] <- lapply(data[, task$covariates], function(col) {
+data[, task$covariates] <- lapply(data[, task$covariates], function(col) {
   col[col == -999] <- NA
   col
 })
