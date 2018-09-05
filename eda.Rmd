@@ -78,9 +78,7 @@ m <- sapply(m,function(x){
 corr<- correlate(m)
 ke a pretty plot
 library(dplyr)
-x <- corr %>%
-       rearrange(method = "HC", absolute = FALSE) %>%
-       shave()
+x <- corr %>% rearrange(method = "HC") %>% shave()
 
 fashion(x)
 
@@ -92,6 +90,11 @@ rplot(x, legend=T)
 ## tSNE
 
 ```{r tsne}
+
+
+#first create sample of the data
+sample <- m[sample(1:nrow(m),500,replace=false),]
+
 library(tsne)
 tsne<- tsne(m)
 ```
