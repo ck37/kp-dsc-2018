@@ -69,7 +69,7 @@ pairs.panels(data.frame[c("DER_mass_MMC", "DER_mass_transverse_met_lep”,  “D
 ```{r corrr}
 library(corrr)
 
-m <- dplyr::select(task$data, -c(label, eventid, kaggleset, kagglewe
+m <- dplyr::select(task$data, -c(label, eventid, kaggleset, kaggleweight))
 m <- sapply(m,function(x){
   x<-as.numeric(x)
 
