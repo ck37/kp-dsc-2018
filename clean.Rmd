@@ -103,7 +103,7 @@ head(data)
 colMeans(is.na(data))
 
 # Replace -999 values with NA for all of our covariates.
-data[, task$covariates] <- lapply(data[, task$covariates], function(col) {
+task$data[, task$covariates] <- lapply(data[, task$covariates], function(col) {
   col[col == -999] <- NA
   col
 })
@@ -122,7 +122,12 @@ colMeans(is.na(data[, task$covariates]))
 # Add missingness indicators and impute missing values to median.
 impute <- ck37r::impute_missing_values(data, type = "standard", verbose = TRUE)
 
+#try out miss.forest
+#library(missForest)
+#impute2 <- missForest(task$data[task$covariates], maxiter = 10, ntree = 100, verbose = F)
+
 task$data <- impute$data
+#task$data <- impute2
 
 # Clear out this $data element so that we don't have two copies of the data.
 impute$data = NULL
