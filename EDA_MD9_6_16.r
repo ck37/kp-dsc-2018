@@ -188,7 +188,7 @@ library(psych)
  data$der_mass_mmc<- log10( data$der_mass_mmc)
 
  data$log_pri_met_sumet<- log10( data$pri_met_sumet)
-
+# coming back to this later,section above
 
  d <- density(data$pri_met_sumet)
  plot(d, main="Kernel Density of Miles Per Gallon")
@@ -197,24 +197,49 @@ library(psych)
  library(ggplot2)
  library(tidyr)
  getwd()
-
- newdata <- data[c(-1,-32,-34,-35,-36,-5)]
+# removing id,
+ newdata <- data[c(-1,-32,-34,-35)]
  newdata$outcome<- ifelse(newdata$label=="s",1,0)  # look at newdata first make sure variable outcome is created correctly
  newdata<- newdata[c(-30)]
  save(newdata, file="newdata.rda")
  load("newdata.Rda")
+ newdata1<-newdata # will use newdata1 to add new variable
 
- d <- data[, task$covariates]
-                     # Keep only numeric columns
+ library(dlookr)
+ library(dplyr)
+ diagnose(newdata)
+ newdata %>%
+diagnose() %>%
+select(-unique_count, -unique_rate) %>%
+   filter(missing_count > 0) %>%
+   arrange(desc(missing_count))
+
+ #missing value proportion:
+ #install.packages("DataExplorer")
+ library(DataExplorer)
+ introduce(newdata)
+ plot_missing(newdata)
+#creating indicator for missingess for highly missing data
+
+ newdata1$ind_der_deltaeta_jet_jet <- ifelse(!is.na(newdata1$der_deltaeta_jet_jet),1,0)
+ newdata1$ind_der_mass_jet_jet <- ifelse(!is.na(newdata1$der_mass_jet_jet),1,0)
+ newdata1$ind_der_prodeta_jet_jet<- ifelse(!is.na(newdata1$der_prodeta_jet_jet),1,0)
+ newdata1$ind_der_lep_eta_centrality<- ifelse(!is.na(newdata1$der_lep_eta_centrality),1,0)
+ newdata1$ind_pri_jet_subleading_pt<- ifelse(!is.na(newdata1$pri_jet_subleading_pt),1,0)
+ newdata1$ind_pri_jet_subleading_eta<- ifelse(!is.na(newdata1$pri_jet_subleading_eta),1,0)
+ newdata1$ind_pri_jet_subleading_phi<- ifelse(!is.na(newdata1$pri_jet_subleading_phi),1,0)
+
+ # Keep only numeric columns
+ newdata %>%
    gather() %>%                             # Convert to key-value pairs
    ggplot(aes(value)) +                     # Plot the values
-   facet_wrap(~ key, scales = "free") +   # In separate panels
+   facet_wrap(~ key, scales = "free")    # In separate panels
    geom_density()
+
 #we start by “melting” our data from a wide format into a long format.
     require(reshape2)
     melt.boston <- melt(newdata)
     head(melt.boston)
-
 
     #Small Multiple Chart( density plot)
  ggplot(data = melt.boston, aes(x = value, )) +   stat_density() +
@@ -225,34 +250,71 @@ library(psych)
  boxplot(newdata) +facet_wrap(~variable, scales = "free")
 
 
-   #missing value proportion:
-   install.packages("DataExplorer")
-   library(DataExplorer)
-     introduce(data)
-     plot_missing(newdata)
+
 
 
 #outliers
-    install.packages("dlookr")
+    #install.packages("dlookr")
     library(dlookr)
     outliers<-diagnose_outlier(newdata)
     write.table(outliers, file = "outliers.csv", sep = ",")
-    imputed_der_mass_vis<- imputate_outlier(newdata,der_mass_vis, method = "capping")
-    summary(imputed_outlier)
-    plot(imputed_outlier)
+    # diagosed outliers and filter out any with more than 3% outliers
+    diagnose_outlier(newdata) %>%
+      filter(outliers_ratio > 3) %>%
+      mutate(rate = outliers_mean / with_mean) %>%
+      arrange(desc(rate)) %>%
+      select(-outliers_cnt)
+
+    #visualize anomaly values of all numeric variables with an outlier ratio of 0.5% or more.:
+
+    library( dplyr )
+    newdata %>%
+      plot_outlier(diagnose_outlier(newdata) %>%
+                     filter(outliers_ratio >= 0.5) %>%
+                     select(variables) %>%
+                     unlist())
+#imputing variable with a lot of outliers
+
+    newdata1$imputed_der_mass_vis<- imputate_outlier(newdata,der_mass_vis, method = "capping")
+    summary( newdata1$imputed_der_mass_vis)
+    plot( newdata1$imputed_der_mass_vis)
+
+    newdata1$imputed_pri_tau_pt<- imputate_outlier(newdata,pri_tau_pt, method = "capping")
+    summary( newdata1$imputed_pri_tau_pt)
+    plot( newdata1$imputed_pri_tau_pt)
+
+    newdata1$imputed_der_pt_h<- imputate_outlier(newdata,der_pt_h, method = "capping")
+    summary( newdata1$imputed_der_pt_h)
+    plot( newdata1$imputed_der_pt_h)
+
+    newdata1$imputed_der_mass_mmc<- imputate_outlier(newdata,der_mass_mmc, method = "capping")
+    summary( newdata1$imputed_der_mass_mmc)
+    plot( newdata1$imputed_der_mass_mmc)
+
+    newdata1$imputed_pri_met <- imputate_outlier(newdata,pri_met , method = "capping")
+    summary( newdata1$imputed_pri_met )
+    plot( newdata1$imputed_pri_met )
+
+    newdata1$imputed_pri_lep_pt<- imputate_outlier(newdata,pri_lep_pt, method = "capping")
+    summary( newdata1$imputed_pri_lep_pt)
+    plot( newdata1$imputed_pri_lep_pt)
 
 
 
-    #saving newdata:
+
+
+    categ <- target_by(newdata, outcome)
+
+
+
+
+
+#saving newdata:
     newdata %>%
     diagnose_report(output_format = "html")
     transformation_report(target = outcome, output_format = "html",
                           output_file = "transformation.html")
-    pri_tau_pt
-    der_pt_h
-    der_mass_mmc
-    pri_lep_pt
-    pri_met
+
 
 
 
