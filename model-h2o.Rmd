@@ -12,9 +12,11 @@ source("R/_startup.R")
 startup(auto_install = FALSE, verbose = FALSE,
         # We are assuming this model is being run on a server with 128GB+ RAM.
         # TODO: this is not enough memory - need to increase.
-        java_mem = "10g")
+        java_mem = "100g")
 # Load all .R files in the R/ subdirectory.
 ck37r::load_all_code("R", verbose = TRUE)
+library(rJava)
+library(h2o)
 
 # File created in clean.Rmd
 load("data/clean.RData")
@@ -32,6 +34,7 @@ task$model_name = "h2o"
 # greater customization.
 library(h2o)
 h2o.init(nthreads = RhpcBLASctl::get_num_cores())
+ck37r::get_java_memory(verbose = TRUE)
 
 ```
 
@@ -54,7 +57,7 @@ estimator =
                   nfolds = 5L,
                   #weights_column = "_obsWeights",
                   #max_runtime_secs = max_runtime_secs,
-                  max_models = 10L,
+                  max_models = 100L,
                   # Set to 0 to disable runtime execution maximum.
                   max_runtime_secs = 0,
                   #stopping_rounds = stopping_rounds,
