@@ -45,12 +45,25 @@ ck37r::get_java_memory(verbose = TRUE)
 h2o_data = as.h2o(cbind(`_outcome` = factor(task$outcome),
                         task$data[task$covariates]))
 names(h2o_data)
+class(h2o_data)
+dim(h2o_data)
+
+# split into train and validation sets
+h2o_split = h2o.splitFrame(data = h2o_data, ratios = 0.8, seed = 8273704)
+h2o_train = h2o_split[[1]]
+h2o_validation = h2o_split[[2]]
+# 200k in train
+dim(h2o_train)
+# 50k in validation
+dim(h2o_validation)
 
 # TODO: add validation frame.
 estimator =
   h2o::h2o.automl(y = "_outcome",
                   x = task$covariates,
-                  training_frame = h2o_data,
+                  #training_frame = h2o_data,
+                  training_frame = h2o_train,
+                  validation_frame = h2o_validation,
                   #fold_column = cv_fold_name,
                   seed = 3137033,
                   #nfolds = 5L,
@@ -60,7 +73,7 @@ estimator =
                   max_models = 100L,
                   # Set to 0 to disable runtime execution maximum.
                   max_runtime_secs = 0,
-                  #stopping_rounds = stopping_rounds,
+                  #stopping_rounds = 5L,
                   stopping_metric = "AUC",
                   sort_metric = "AUC")
 estimator@leaderboard
@@ -143,4 +156,8 @@ rio::export(export,
                           threshold, "-",  version, "-",
                           format(Sys.time(), "%m-%d"), ".csv"))
 
+```
+
+```{r}
+h2o.shutdown(prompt = FALSE)
 ```
