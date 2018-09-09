@@ -133,7 +133,7 @@ sample <- data[sample(1:nrow(task$data), 1000, replace=F),]
 #impute2 <- missForest(sample[task$covariates], maxiter = 4, ntree = 50, verbose = F, parallelize='forests', nodesize = c(100, 100))
 
 #NN: will save just the missforest imputed data for now (can't run ck37 on Rcomp yet, so need to manually export the missforest imputation to my personal laptop)
-#save(impute2,    file = "data/missforest.RData")
+#save(impute2,    file = "data/missforest.RData") 
 #head(impute2)
 #View(impute2[1:50,])
 
