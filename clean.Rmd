@@ -23,7 +23,9 @@ source("R/_startup.R")
 ```{r import_data}
 
 # Import as a data.frame rather than a data.table - avoids extra complication.
-data = data.table::fread("data-raw/train.csv", data.table = FALSE)
+#data = data.table::fread("data-raw/train.csv", data.table = FALSE)
+load("~/Google Drive/kp-dsc-2018/data/completedataMD.rda")
+data <- as.data.frame(completedataMD)
 dim(data)
 
 # examine the structure of the data
@@ -35,7 +37,7 @@ str(data)
 # data$label1 <- ifelse(as.character(data$label) == "s", 0, 1)
 
 # Review classes in our dataset.
-table(sapply(data, class))
+#table(sapply(data, class))
 sapply(data, class)
 
 # Review the number of unique values in each column.
