@@ -122,7 +122,7 @@ colMeans(is.na(data[, task$covariates]))
 # Add missingness indicators and impute missing values to median.
 impute <- ck37r::impute_missing_values(data, type = "standard", verbose = TRUE)
 
-#try out miss.forest
+#try out miss.forest 
 #library(missForest)
 #impute2 <- missForest(task$data[task$covariates], maxiter = 10, ntree = 100, verbose = F)
 
