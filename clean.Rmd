@@ -25,7 +25,7 @@ source("R/_startup.R")
 # Import as a data.frame rather than a data.table - avoids extra complication.
 #data = data.table::fread("data-raw/train.csv", data.table = FALSE)
 load("~/Google Drive/kp-dsc-2018/data/completedataMD.rda")
-data <- as.data.frame(completedataMD)
+data <- as.data.frame(completedataMD) 
 dim(data)
 
 # examine the structure of the data
