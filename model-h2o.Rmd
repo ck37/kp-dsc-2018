@@ -72,7 +72,8 @@ estimator =
                   #max_runtime_secs = max_runtime_secs,
                   max_models = 100L,
                   # Set to 0 to disable runtime execution maximum.
-                  max_runtime_secs = 0,
+                  # 10 hour limit
+                  max_runtime_secs = 36000,
                   #stopping_rounds = 5L,
                   stopping_metric = "AUC",
                   sort_metric = "AUC")
