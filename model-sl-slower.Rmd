@@ -1,5 +1,5 @@
 ---
-title: "Model: SL basic"
+title: "Model: SL Slower"
 output: html_document
 ---
 
