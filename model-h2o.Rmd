@@ -1,0 +1,143 @@
+---
+title: "Model: h2o"
+output: html_document
+---
+
+```{r setup, include=TRUE}
+knitr::opts_chunk$set(echo = TRUE)
+
+# Load an initial pair of startup functions.
+source("R/_startup.R")
+# Load necessary libraries; set auto_install = TRUE to try to install any needed packages.
+startup(auto_install = FALSE, verbose = FALSE,
+        # We are assuming this model is being run on a server with 128GB+ RAM.
+        # TODO: this is not enough memory - need to increase.
+        java_mem = "10g")
+# Load all .R files in the R/ subdirectory.
+ck37r::load_all_code("R", verbose = TRUE)
+
+# File created in clean.Rmd
+load("data/clean.RData")
+
+# Define a model name specifically for this Rmd file.
+task$model_name = "h2o"
+```
+
+## Define estimators
+
+```{r define_estimators}
+# Start h2o server is one hasn't already been started, otherwise
+# connect to an existing server. Ideally the server would have
+# been started manually prior to running SL though, to allow
+# greater customization.
+library(h2o)
+h2o.init(nthreads = RhpcBLASctl::get_num_cores())
+
+```
+
+## Run estimation
+
+```{r run_estimation}
+# In h2o, outcome should be a factor for classification.
+h2o_data = as.h2o(cbind(`_outcome` = factor(task$outcome),
+                        task$data[task$covariates]))
+names(h2o_data)
+
+# TODO: add validation frame.
+estimator =
+  h2o::h2o.automl(y = "_outcome",
+                  x = task$covariates,
+                  training_frame = h2o_data,
+                  #fold_column = cv_fold_name,
+                  seed = 3137033,
+                  #nfolds = 5L,
+                  nfolds = 5L,
+                  #weights_column = "_obsWeights",
+                  #max_runtime_secs = max_runtime_secs,
+                  max_models = 10L,
+                  # Set to 0 to disable runtime execution maximum.
+                  max_runtime_secs = 0,
+                  #stopping_rounds = stopping_rounds,
+                  stopping_metric = "AUC",
+                  sort_metric = "AUC")
+estimator@leaderboard
+
+# X mins on Benten
+# cat("Execution time:", round(sl$times$everything["elapsed"] / 60, 1), "minutes.\n")
+
+# Save our results and our task for posterity.
+save(estimator, task,
+     file = paste0("data/model-", task$model_name, ".RData"))
+```
+
+## Review model
+
+```{r review_model, eval = FALSE}
+# Review auc of the learners.
+#ck37r::auc_table(sl, y = task$outcome)
+# TODO: export table.
+
+# Plot ROC curve.
+# TODO: fix this, currently broken.
+#ck37r::plot_roc(sl, y = task$outcome)
+#ggsave(paste0("visuals/roc-", task$model_name, ".png"))
+
+# Plot predictions.
+#qplot(sl$SL.predict) + theme_minimal()
+#ggsave(paste0("visuals/training-predictions-", task$model_name, ".png"))
+
+#labels = as.numeric(sl$SL.predict > 0.5, 1, 0)
+#table(labels, task$outcome, useNA = "ifany")
+# 88% internal estimate, but 83% based on leaderboard submission.
+#(accuracy = mean(labels == task$outcome))
+
+# TODO: identify optimal threshold.
+
+# TODO: calculate the class label based AUC using the cross-validation folds rather than resubstitution.
+
+# TODO: review OOB curve for ranger model.
+
+```
+
+## Predict on test
+
+TODO: convert more of this code to functions so that it isn't duplicated across model files.
+
+```{r test_prediction}
+
+# Need to integrate our dataframe into h2o.
+h2o_test = as.h2o(task$data_test)
+
+# Takes only 4 seconds.
+system.time({
+  predictions = as.vector(h2o.predict(object = estimator, newdata = h2o_test)$p1)
+})
+
+
+# Review prediction distribution.
+summary(predictions)
+qplot(predictions, bins = 100L) + theme_minimal()
+ggsave(paste0("visuals/test-hist-", task$model_name, ".png"))
+
+# Create a dataframe that contains just what we need to submit an entry.
+# $eventid is the primary id for each observation.
+export = data.frame(EventId = task$id_test, Label = predictions)
+
+# Convert probability prediction to a class prediction.
+#threshold = 0.35
+(threshold = round(mean(task$outcome), 4))
+export$Label = ifelse(export$Label > threshold, "s", "b")
+
+# Review predicted class labels.
+table(export$Label)
+prop.table(table(export$Label))
+
+# Generate a csv file to upload to competition submission page.
+# TODO: add date+time to filename?
+version = "m10"
+rio::export(export,
+            file = paste0("exports/submission-", task$model_name, "-",
+                          threshold, "-",  version, "-",
+                          format(Sys.time(), "%m-%d"), ".csv"))
+
+```
