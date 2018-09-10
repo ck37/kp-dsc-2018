@@ -28,8 +28,10 @@ task$model_name = "sl-slower"
 ```{r define_estimators}
 
 # This will select only the top 15 covariates based on correlation with the outcome.
+screen.corRank5 = function(...) screen.corRank2(..., rank = 5)
 screen.corRank15 = function(...) screen.corRank2(..., rank = 15)
 screen.corRank25 = function(...) screen.corRank2(..., rank = 25)
+screen.corRank30 = function(...) screen.corRank2(..., rank = 30)
 
 # Create 9 combinations of settings for xgboost.
 xgb_grid =
@@ -37,33 +39,39 @@ xgb_grid =
                  detailed_names = TRUE,
                  tune = list(
                    # TODO: conduct more extensive hyperparameter tuning.
-                   shrinkage = c(0.001, 0.01, 0.1),
-                   max_depth = c(1, 4, 8)
+                   shrinkage = c(0.01, 0.1),
+                   #max_depth = c(1, 4, 8)
+                   max_depth = c(4, 8)
                  ))
 xgb_grid$names
 
 # Setup parallel backend for glmnet_fast.
-doParallel::registerDoParallel(cores = RhpcBLASctl::get_num_cores())
-foreach::getDoParWorkers()
+#doParallel::registerDoParallel(cores = RhpcBLASctl::get_num_cores())
+#foreach::getDoParWorkers()
 
-bartMachine::set_bart_machine_num_cores(RhpcBLASctl::get_num_cores())
-bartMachine::bart_machine_num_cores()
+#bartMachine::set_bart_machine_num_cores(RhpcBLASctl::get_num_cores())
+#bartMachine::bart_machine_num_cores()
 
 # Confirm that we have 120GB+ allocated to rJAva.
-invisible(ck37r::get_java_memory(verbose = TRUE))
+#invisible(ck37r::get_java_memory(verbose = TRUE))
 sl_lib =
-  c(lapply(xgb_grid$names, function(name) c(name, "All", "screen.corRank25")),
-    list(c("SL.xgboost_fast", "All", "screen.corRank25"),
-         c("SL.bartMachine2", "All", "screen.corRank25"),
+  #c(lapply(xgb_grid$names, function(name) c(name, "All", "screen.corRank25")),
+  c(# lapply(xgb_grid$names, function(name) c(name, "All")),
+    list(#c("SL.xgboost_fast", "All", "screen.corRank25"),
+         #c("SL.bartMachine2", "All", "screen.corRank25"),
          # Broken, need to fix:
          # Error in check.booster.params(params, ...) : 
   # Same parameters in 'params' and in the call are not allowed. Please check your 'params' list.
  #        c("SL.xgboost_cv", "All", "screen.corRank25"),
-         c("SL.ranger_fast", "All", "screen.corRank25"),
-         c("SL.glmnet_fast", "All", "screen.corRank25"),
+         #c("SL.ranger_fast", "All", "screen.corRank25"),
+         c("SL.xgboost_cv", "screen.corRank5"),
+         #c("SL.ranger_fast", "All"),
+         c("SL.glm", "All", "screen.corRank30", "screen.corRank25"),
+         #c("SL.glmnet_fast", "All", "screen.corRank25"),
          # TODO: add ck37r::SL.h2o_auto
          "SL.mean"))
 
+options(sl.cores = RhpcBLASctl::get_num_cores())
 ```
 
 ## Run estimation
