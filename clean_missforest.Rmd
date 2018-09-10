@@ -1,7 +1,9 @@
 ---
-title: "Clean raw data"
+title: "Clean raw data using missForest"
 output: html_document
 ---
+Same cleaning code as clean.Rmd, but with the missForest imputation added.
+
 
 ```{r setup, include=TRUE}
 knitr::opts_chunk$set(echo = TRUE)
