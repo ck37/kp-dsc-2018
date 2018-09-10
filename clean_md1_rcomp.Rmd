@@ -1,0 +1,280 @@
+---
+title: "Clean raw data for MD data (part I of II)"
+output: html_document
+---
+
+
+This file is what I run on rcomp to do the missforest imputation. it creates two intermediate datasets that I then run through the clean_md2 file on my personal pc (because I have all the packages loaded there). Sorry this is convoluted!
+
+Input: completedata1MD.rda, train.csv
+Output: impute_md2.rds, testimpute_md2.rds
+
+
+```{r setup, include=TRUE}
+knitr::opts_chunk$set(echo = TRUE) 
+
+# Put in an if (FALSE) block so that it won't run automatically.
+# See https://www.tidyverse.org/articles/2017/12/workflow-vs-script/
+if (FALSE) {
+  # Run this line manually if desired.
+  rm(list = ls())
+}
+# Load an initial pair of startup functions.
+source("R/_startup.R")
+# Load necessary libraries; set auto_install = TRUE to try to install any needed packages.
+#startup(auto_install = FALSE, verbose = FALSE)
+# Load all .R files in the R/ subdirectory.
+#ck37r::load_all_code("R", verbose = TRUE)
+```
+
+```{r import_data}
+
+# Import as a data.frame rather than a data.table - avoids extra complication.
+#data = data.table::fread("data-raw/train.csv", data.table = FALSE)
+load("~/Git/kp-dsc-2018/data/completedata1MD.rda")
+data <- as.data.frame(completedataMD1) 
+dim(data)
+# library(dplyr)
+# data <- dplyr::select(data, -c(outcome))
+
+# examine the structure of the data
+names(data) = tolower(names(data))
+str(data)
+# need this for corellation matrix. converting to numeric s=0 b=1
+# CK: this is already in task$outcome, and current code is adding the outcome
+# to the list of covariates.
+# data$label1 <- ifelse(as.character(data$label) == "s", 0, 1)
+
+# Review classes in our dataset.
+#table(sapply(data, class))
+sapply(data, class)
+
+# Review the number of unique values in each column.
+sapply(data, function(col) { length(unique(col)) })
+
+# pri_jet_num has only 4 so let's convert it to a factor.
+data$pri_jet_num = as.factor(data$pri_jet_num)
+pri_jet_num_table <- table(data$pri_jet_num)
+prop.table(pri_jet_num_table)
+
+#       0        1        2        3 
+#0.399652 0.310176 0.201516 0.088656
+```
+
+```{r data_prep}
+# Define our outcome variable.
+var_outcome = "label"
+# examine the type variable more carefully
+data$label = as.factor(data$label)
+(label_table <- table(data$label))
+# b      s 
+#164333  85667
+prop.table(label_table)
+#b        s 
+#0.657332 0.342668
+
+# Specify which variables we don't want to use for prediction.
+remove_cols =
+  c(var_outcome,
+    # Simply notes that this is all training data.
+    "kaggleset",
+    # Unique row identifier.
+    "eventid",
+    # These are sampling weights that were used to over-sample the event data (because the outcome is rare)
+    "kaggleweight", "weight")
+
+# Create a list to save our outcome, data, and covariates.
+# This can then be used for EDA, modeling, etc.
+task = list(
+  # Save our primary dataset.
+  data = data,
+  # Specify which covariates we can use for predicting the outcome
+  # (these are only the column names, which can be indexed into task$data).
+  covariates = names(data)[!names(data) %in% remove_cols],
+  # Specify the outcome vector.
+  outcome = as.integer(data[[var_outcome]] == "s")
+)
+
+# Review covariates.
+task$covariates
+
+# Review outcome distribution.
+table(task$outcome, useNA = "ifany")
+prop.table(table(task$outcome, useNA = "ifany"))
+```
+
+## Missing values
+
+```{r missing_values}
+sapply(data, class)
+table(is.na(data)) 
+head(data)
+
+# No missingness initially.
+colMeans(is.na(data))
+
+# Replace -999 values with NA for all of our covariates.
+data[, task$covariates] <- lapply(data[, task$covariates], function(col) {
+  col[col == -999] <- NA
+  col
+})
+
+# Review missingness.
+table(is.na(data))
+colMeans(is.na(data[, task$covariates]))
+
+# der_mass_mmc 0.152456 
+# pri_jet_leading_eta pri_jet_leading_eta pri_jet_leading_phi  0.399652 
+# der_lep_eta_centrality  der_deltaeta_jet_jet  der_mass_jet_jet  der_prodeta_jet_jet 0.709828
+# pri_jet_subleading_eta  pri_jet_subleading_pt pri_jet_subleading_pt  0.709828
+# my guess is the variables in the 2 rows above are highly corelated, they have same percentage of missing. 
+# corrrelation matrix
+ 
+# Add missingness indicators and impute missing values to median.
+impute <- ck37r::impute_missing_values(data, type = "standard", verbose = TRUE)
+
+#try out miss.forest 
+library(missForest)
+set.seed(2346789)
+library(doParallel)
+registerDoParallel(cores=20)
+
+sample <- data[sample(1:nrow(data), 250000, replace=F),]
+impute2 <- missForest(sample, maxiter = 7, ntree = 80, verbose = F, parallelize='forests', nodesize = c(100, 100))
+
+impute2 <- missForest(data, maxiter = 6, ntree = 80, verbose = F, parallelize='forests',nodesize = c(100, 100))
+
+imputes<-impute2$ximp
+# #NN: will save just the missforest imputed data for now (can't run ck37 on Rcomp yet, so need to manually export the missforest imputation to my personal laptop)
+# data2<-sample
+# data2[task$covariates] <- imputes[task$covariates]
+# head(data2)
+
+saveRDS(imputes, file = './data/impute_md2.rds') 
+
+
+#add in the newly imputed values (from missforest) to data
+#task$data <- impute$data
+#impute2 <- readRDS("./data/impute.rds")
+task$data <- data2
+
+# Clear out this $data element so that we don't have two copies of the data.
+impute$data = NULL
+
+# Add missingness indicators to task$covariates
+(task$covariates <- c(task$covariates, impute$indicators_added))
+
+# Confirm that all of our covariates exist in the data.
+all(task$covariates %in% names(task$data))
+
+```
+
+<!-- ## Convert factors to indicators -->
+
+<!-- ```{r factors_to_indicators} -->
+
+<!-- sapply(task$data, class) -->
+
+<!-- # This will only apply to $pri_jet_num -->
+<!-- # We need to do the same step on the testing data. -->
+<!-- factors = ck37r::factors_to_indicators(data, predictors = task$covariates, verbose = TRUE) -->
+<!-- names(factors) -->
+
+<!-- # This is dropping the missingness indicators for some reason - appears to be -->
+<!-- # a bug in factors_to_indicators - need to investigate. -->
+<!-- names(factors$data) -->
+<!-- factors$factor_names -->
+
+<!-- # TODO: this as.vector shouldn't be needed but $factor_names is a column matrix -->
+<!-- # (erroneously). -->
+<!-- task$data = cbind(task$data, factors$data[, as.vector(factors$factor_names)]) -->
+<!-- names(task$data) -->
+
+<!-- # Update our covariate list to include the 3 new indicator columns. -->
+<!-- (task$covariates = c(task$covariates, as.vector(factors$factor_names))) -->
+
+<!-- # Clear out this extra copy of the dataframe to save memory & storage size. -->
+<!-- factors$data = NULL -->
+
+<!-- # Remove $pri_jet_num now that it exists as indicators. -->
+<!-- task$data$pri_jet_num = NULL -->
+<!-- (task$covariates = setdiff(task$covariates, "pri_jet_num")) -->
+
+<!-- # Confirm that all of our covariates exist in our training data. -->
+<!-- stopifnot(all(task$covariates %in% names(task$data))) -->
+<!-- ``` -->
+
+## Clean test
+
+```{r clean_test}
+test = data.table::fread("data-raw/test.csv", data.table = FALSE)
+dim(test)
+
+(names(test) = tolower(names(test)))
+
+# Restrict to columns that we want.
+#test_df = test[, names(test) %in% task$covariates]
+test_df = test
+
+# Convert pri_jet_num to a factor.
+test_df$pri_jet_num = as.factor(test_df$pri_jet_num)
+
+# Replace -999 values with NA for all of our covariates.
+# TODO: convert to a function that we re-use code between model.Rmd and clean.Rmd.
+test_df[, names(test_df)] <- lapply(test_df, function(col) {
+  col[col == -999] <- NA
+  col
+})
+
+sapply(test_df, class)
+
+# Review missing proportions.
+colMeans(is.na(test_df))
+
+#random forest imputation
+impute_test <- missForest(test_df, maxiter = 4, ntree = 50, verbose = F, parallelize='forests', nodesize = c(100, 100))
+
+
+imputes_t<-impute_test$ximp
+
+saveRDS(imputes_t, file = './data/testimpute_md2.rds') 
+
+# 
+# 
+# # Impute missing values.
+# # TODO: should use imputation medians from the training data rather the test data.
+# impute_test = ck37r::impute_missing_values(test_df, verbose = TRUE)
+# test_df = impute_test$data
+# 
+# names(test_df)
+# sapply(test_df, class)
+# 
+# # Convert factors to indicators.
+# # factors = ck37r::factors_to_indicators(test_df, verbose = TRUE)
+# # 
+# # test_df = factors$data
+# # 
+# # # Restrict to the covariates used for prediction.
+# # test_df = test_df[, task$covariates]
+# # 
+# # # This should return character(0)
+# # task$covariates[!task$covariates %in% names(test_df)]
+# # 
+# # # Confirm all of our covariates are right.
+# # all(names(test_df) %in% task$covariates)
+# # all(task$covariates %in% names(test_df))
+# # 
+# # task$data_test = test_df
+# task$id_test = test$eventid
+```
+
+<!-- ## Save results -->
+
+<!-- ```{r save_results} -->
+<!-- # Review elments of our task object. -->
+<!-- names(task) -->
+
+<!-- # Save imputation and factor objects for future reference -->
+<!-- save(task, impute, factors, -->
+<!--      file = "data/clean.RData") -->
+<!-- ``` -->
