@@ -31,7 +31,7 @@ source("R/_startup.R")
 
 # Import as a data.frame rather than a data.table - avoids extra complication.
 #data = data.table::fread("data-raw/train.csv", data.table = FALSE)
-load("~/Git/kp-dsc-2018/data/completedata1MD.rda")
+load("~./data/completedata1MD.rda")
 data <- as.data.frame(completedataMD1) 
 dim(data)
 # library(dplyr)
@@ -139,8 +139,8 @@ set.seed(2346789)
 library(doParallel)
 registerDoParallel(cores=20)
 
-sample <- data[sample(1:nrow(data), 250000, replace=F),]
-impute2 <- missForest(sample, maxiter = 7, ntree = 80, verbose = F, parallelize='forests', nodesize = c(100, 100))
+# sample <- data[sample(1:nrow(data), 250000, replace=F),]
+# impute2 <- missForest(sample, maxiter = 7, ntree = 80, verbose = F, parallelize='forests', nodesize = c(100, 100))
 
 impute2 <- missForest(data, maxiter = 6, ntree = 80, verbose = F, parallelize='forests',nodesize = c(100, 100))
 
