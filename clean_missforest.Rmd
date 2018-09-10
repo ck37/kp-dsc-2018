@@ -131,7 +131,8 @@ indicators <- dplyr::select(impute$data, c("miss_der_mass_mmc","miss_der_deltaet
 library(missForest)
 set.seed(2346789)
 library(doParallel)
-registerDoParallel(cores=20)
+# Use up to 20 cores.
+registerDoParallel(cores = min(20, RhpcBLASctl::get_num_cores()))
 # sample <- data[sample(1:nrow(data), 250, replace=F),]
  #impute2 <- missForest(sample[task$covariates], maxiter = 4, ntree = 50, verbose = F, parallelize='forests', nodesize = c(100, 100))
 impute2 <- missForest(data[task$covariates], maxiter = 4, ntree = 50, verbose = F, parallelize='forests',nodesize = c(100, 100))
@@ -271,5 +272,5 @@ names(task)
 
 # Save imputation and factor objects for future reference
 save(task, impute, factors,
-     file = "data/clean.RData")
+     file = "data/clean-missforest.RData")
 ```
