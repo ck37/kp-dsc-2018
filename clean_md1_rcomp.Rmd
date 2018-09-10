@@ -31,7 +31,7 @@ source("R/_startup.R")
 
 # Import as a data.frame rather than a data.table - avoids extra complication.
 #data = data.table::fread("data-raw/train.csv", data.table = FALSE)
-load("~./data/completedata1MD.rda")
+load("./data/completedata1MD.rda")
 data <- as.data.frame(completedataMD1) 
 dim(data)
 # library(dplyr)
