@@ -1,7 +1,14 @@
 ---
-title: "Clean raw data"
+title: "Clean raw data for MD data (part I of II)"
 output: html_document
 ---
+
+
+This file is what I run on rcomp to do the missforest imputation. it creates two intermediate datasets that I then run through the clean_md2 file on my personal pc (because I have all the packages loaded there). Sorry this is convoluted!
+
+Input: completedata1MD.rda, train.csv
+Output: impute_md2.rds, testimpute_md2.rds
+
 
 ```{r setup, include=TRUE}
 knitr::opts_chunk$set(echo = TRUE)
@@ -23,7 +30,12 @@ source("R/_startup.R")
 ```{r import_data}
 
 # Import as a data.frame rather than a data.table - avoids extra complication.
-data = data.table::fread("data-raw/train.csv", data.table = FALSE)
+#data = data.table::fread("data-raw/train.csv", data.table = FALSE)
+load("~/Git/kp-dsc-2018/data/completedata1MD.rda")
+data <- as.data.frame(completedataMD1) 
+dim(data)
+# library(dplyr)
+# data <- dplyr::select(data, -c(outcome))
 
 # examine the structure of the data
 names(data) = tolower(names(data))
@@ -122,23 +134,29 @@ colMeans(is.na(data[, task$covariates]))
 impute <- ck37r::impute_missing_values(data, type = "standard", verbose = TRUE)
 
 #try out miss.forest 
-# library(missForest)
-# set.seed(2346789)
-# library(doParallel)
-# registerDoParallel(cores=20)
-# sample <- data[sample(1:nrow(data), 250000, replace=F),]
-# impute2 <- missForest(sample[task$covariates], maxiter = 4, ntree = 50, verbose = F, parallelize='forests', nodesize = c(100, 100))
-#impute2 <- missForest(data[task$covariates], maxiter = 4, ntree = 50, verbose = F, parallelize='forests',nodesize = c(100, 100))
+library(missForest)
+set.seed(2346789)
+library(doParallel)
+registerDoParallel(cores=20)
+
+sample <- data[sample(1:nrow(data), 250000, replace=F),]
+impute2 <- missForest(sample, maxiter = 7, ntree = 80, verbose = F, parallelize='forests', nodesize = c(100, 100))
+
+impute2 <- missForest(data, maxiter = 6, ntree = 80, verbose = F, parallelize='forests',nodesize = c(100, 100))
+
+imputes<-impute2$ximp
+# #NN: will save just the missforest imputed data for now (can't run ck37 on Rcomp yet, so need to manually export the missforest imputation to my personal laptop)
 # data2<-sample
-# data2[task$covariates] <- impute2[task$covariates]
+# data2[task$covariates] <- imputes[task$covariates]
 # head(data2)
-# save(data2,    file = './data/impute_md.rds') 
+
+saveRDS(imputes, file = './data/impute_md2.rds') 
+
+
 #add in the newly imputed values (from missforest) to data
+#task$data <- impute$data
 #impute2 <- readRDS("./data/impute.rds")
-#task$data <- data2
-
-task$data <- impute$data
-
+task$data <- data2
 
 # Clear out this $data element so that we don't have two copies of the data.
 impute$data = NULL
@@ -151,40 +169,40 @@ all(task$covariates %in% names(task$data))
 
 ```
 
-## Convert factors to indicators
+<!-- ## Convert factors to indicators -->
 
-```{r factors_to_indicators}
+<!-- ```{r factors_to_indicators} -->
 
-sapply(task$data, class)
+<!-- sapply(task$data, class) -->
 
-# This will only apply to $pri_jet_num
-# We need to do the same step on the testing data.
-factors = ck37r::factors_to_indicators(data, predictors = task$covariates, verbose = TRUE)
-names(factors)
+<!-- # This will only apply to $pri_jet_num -->
+<!-- # We need to do the same step on the testing data. -->
+<!-- factors = ck37r::factors_to_indicators(data, predictors = task$covariates, verbose = TRUE) -->
+<!-- names(factors) -->
 
-# This is dropping the missingness indicators for some reason - appears to be
-# a bug in factors_to_indicators - need to investigate.
-names(factors$data)
-factors$factor_names
+<!-- # This is dropping the missingness indicators for some reason - appears to be -->
+<!-- # a bug in factors_to_indicators - need to investigate. -->
+<!-- names(factors$data) -->
+<!-- factors$factor_names -->
 
-# TODO: this as.vector shouldn't be needed but $factor_names is a column matrix
-# (erroneously).
-task$data = cbind(task$data, factors$data[, as.vector(factors$factor_names)])
-names(task$data)
+<!-- # TODO: this as.vector shouldn't be needed but $factor_names is a column matrix -->
+<!-- # (erroneously). -->
+<!-- task$data = cbind(task$data, factors$data[, as.vector(factors$factor_names)]) -->
+<!-- names(task$data) -->
 
-# Update our covariate list to include the 3 new indicator columns.
-(task$covariates = c(task$covariates, as.vector(factors$factor_names)))
+<!-- # Update our covariate list to include the 3 new indicator columns. -->
+<!-- (task$covariates = c(task$covariates, as.vector(factors$factor_names))) -->
 
-# Clear out this extra copy of the dataframe to save memory & storage size.
-factors$data = NULL
+<!-- # Clear out this extra copy of the dataframe to save memory & storage size. -->
+<!-- factors$data = NULL -->
 
-# Remove $pri_jet_num now that it exists as indicators.
-task$data$pri_jet_num = NULL
-(task$covariates = setdiff(task$covariates, "pri_jet_num"))
+<!-- # Remove $pri_jet_num now that it exists as indicators. -->
+<!-- task$data$pri_jet_num = NULL -->
+<!-- (task$covariates = setdiff(task$covariates, "pri_jet_num")) -->
 
-# Confirm that all of our covariates exist in our training data.
-stopifnot(all(task$covariates %in% names(task$data)))
-```
+<!-- # Confirm that all of our covariates exist in our training data. -->
+<!-- stopifnot(all(task$covariates %in% names(task$data))) -->
+<!-- ``` -->
 
 ## Clean test
 
@@ -213,40 +231,50 @@ sapply(test_df, class)
 # Review missing proportions.
 colMeans(is.na(test_df))
 
-# Impute missing values.
-# TODO: should use imputation medians from the training data rather the test data.
-impute_test = ck37r::impute_missing_values(test_df, verbose = TRUE)
-test_df = impute_test$data
+#random forest imputation
+impute_test <- missForest(test_df, maxiter = 4, ntree = 50, verbose = F, parallelize='forests', nodesize = c(100, 100))
 
-names(test_df)
-sapply(test_df, class)
 
-# Convert factors to indicators.
-factors = ck37r::factors_to_indicators(test_df, verbose = TRUE)
+imputes_t<-impute_test$ximp
 
-test_df = factors$data
+saveRDS(imputes_t, file = './data/testimpute_md2.rds') 
 
-# Restrict to the covariates used for prediction.
-test_df = test_df[, task$covariates]
-
-# This should return character(0)
-task$covariates[!task$covariates %in% names(test_df)]
-
-# Confirm all of our covariates are right.
-all(names(test_df) %in% task$covariates)
-all(task$covariates %in% names(test_df))
-
-task$data_test = test_df
-task$id_test = test$eventid
+# 
+# 
+# # Impute missing values.
+# # TODO: should use imputation medians from the training data rather the test data.
+# impute_test = ck37r::impute_missing_values(test_df, verbose = TRUE)
+# test_df = impute_test$data
+# 
+# names(test_df)
+# sapply(test_df, class)
+# 
+# # Convert factors to indicators.
+# # factors = ck37r::factors_to_indicators(test_df, verbose = TRUE)
+# # 
+# # test_df = factors$data
+# # 
+# # # Restrict to the covariates used for prediction.
+# # test_df = test_df[, task$covariates]
+# # 
+# # # This should return character(0)
+# # task$covariates[!task$covariates %in% names(test_df)]
+# # 
+# # # Confirm all of our covariates are right.
+# # all(names(test_df) %in% task$covariates)
+# # all(task$covariates %in% names(test_df))
+# # 
+# # task$data_test = test_df
+# task$id_test = test$eventid
 ```
 
-## Save results
+<!-- ## Save results -->
 
-```{r save_results}
-# Review elments of our task object.
-names(task)
+<!-- ```{r save_results} -->
+<!-- # Review elments of our task object. -->
+<!-- names(task) -->
 
-# Save imputation and factor objects for future reference
-save(task, impute, factors,
-     file = "data/clean.RData")
-```
+<!-- # Save imputation and factor objects for future reference -->
+<!-- save(task, impute, factors, -->
+<!--      file = "data/clean.RData") -->
+<!-- ``` -->
