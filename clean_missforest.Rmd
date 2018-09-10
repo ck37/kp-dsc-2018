@@ -221,10 +221,7 @@ library(dplyr)
 indicators <- dplyr::select(impute_test$data, c("miss_der_mass_mmc","miss_der_deltaeta_jet_jet", "miss_pri_jet_leading_pt"))
 
 #try out miss.forest 
-library(missForest)
 set.seed(2346789)
-library(doParallel)
-registerDoParallel(cores=20)
 # sample <- test_df[sample(1:nrow(data), 250, replace=F),]
 # sample2 <- missForest(sample[task$covariates], maxiter = 4, ntree = 50, verbose = F, parallelize='forests', nodesize = c(100, 100))
 impute_test2 <- missForest(test_df, maxiter = 4, ntree = 50, verbose = F, parallelize='forests',nodesize = c(100, 100))
