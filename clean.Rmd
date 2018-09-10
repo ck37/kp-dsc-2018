@@ -23,10 +23,7 @@ source("R/_startup.R")
 ```{r import_data}
 
 # Import as a data.frame rather than a data.table - avoids extra complication.
-#data = data.table::fread("data-raw/train.csv", data.table = FALSE)
-load("~/Google Drive/kp-dsc-2018/data/completedataMD.rda")
-data <- as.data.frame(completedataMD) 
-dim(data)
+data = data.table::fread("data-raw/train.csv", data.table = FALSE)
 
 # examine the structure of the data
 names(data) = tolower(names(data))
@@ -125,26 +122,23 @@ colMeans(is.na(data[, task$covariates]))
 impute <- ck37r::impute_missing_values(data, type = "standard", verbose = TRUE)
 
 #try out miss.forest 
-#library(missForest)
-#set.seed(2346789)
-#library(doParallel)
-#registerDoParallel(cores=20)
-
-#sample <- data[sample(1:nrow(task$data), 1000, replace=F),]
+# library(missForest)
+# set.seed(2346789)
+# library(doParallel)
+# registerDoParallel(cores=20)
+# sample <- data[sample(1:nrow(data), 250000, replace=F),]
+# impute2 <- missForest(sample[task$covariates], maxiter = 4, ntree = 50, verbose = F, parallelize='forests', nodesize = c(100, 100))
 #impute2 <- missForest(data[task$covariates], maxiter = 4, ntree = 50, verbose = F, parallelize='forests',nodesize = c(100, 100))
-#impute2 <- missForest(sample[task$covariates], maxiter = 4, ntree = 50, verbose = F, parallelize='forests', nodesize = c(100, 100))
-
-#NN: will save just the missforest imputed data for now (can't run ck37 on Rcomp yet, so need to manually export the missforest imputation to my personal laptop)
-#save(impute2,    file = "data/missforest.RData") 
-
-
+# data2<-sample
+# data2[task$covariates] <- impute2[task$covariates]
+# head(data2)
+# save(data2,    file = './data/impute_md.rds') 
 #add in the newly imputed values (from missforest) to data
-#task$data <- impute$data
-impute2 <- readRDS("./data/impute.rds")
-data2<-data
-data2[task$covariates] <- impute2[task$covariates]
-head(data2)
-task$data <- data2
+#impute2 <- readRDS("./data/impute.rds")
+#task$data <- data2
+
+task$data <- impute$data
+
 
 # Clear out this $data element so that we don't have two copies of the data.
 impute$data = NULL
