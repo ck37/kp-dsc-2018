@@ -71,6 +71,20 @@ prop.table(label_table)
 #b        s 
 #0.657332 0.342668
 
+###############
+#Fix covariate indicators (renaming from MD's indicators)
+"ind_der_deltaeta_jet_jet","ind_der_mass_jet_jet"   , "ind_der_prodeta_jet_jet",  "ind_der_lep_eta_centrality" , "ind_pri_jet_subleading_pt", "ind_pri_jet_subleading_eta" , "ind_pri_jet_subleading_phi")
+# names missingness indicators
+names(data)[names(data) == "ind_der_deltaeta_jet_jet"] <- "miss_der_deltaeta_jet_jet"
+names(task$data)
+"miss_der_mass_mmc"             
+"miss_pri_jet_leading_pt" 
+(task$covariates <- c(task$covariates, indicators_added))
+# task$impute <- impute
+task$data <- cbind(task$data, indicators_added)
+
+
+
 # Specify which variables we don't want to use for prediction.
 remove_cols =
   c(var_outcome,
@@ -129,13 +143,10 @@ table(is.na(data))
 # corrrelation matrix
  
 # Add missingness indicators and impute missing values to median.
-#need to import new data for this because the ordering was changed when I imputed the values.  Sorry this is messy!
-# sample <- readRDS("./data/impute_md.rds")
-# library(daff)
-# diff <- differs_from(sample, data)
+
 # 
 # 
-# impute <- ck37r::impute_missing_values(sample(), type = "standard", verbose = TRUE)
+ #impute <- ck37r::impute_missing_values(data, type = "standard", verbose = TRUE)
 
 #try out miss.forest 
 #library(missForest)
@@ -164,17 +175,13 @@ table(is.na(data))
 # Clear out this $data element so that we don't have two copies of the data.
 impute$data = NULL
 
-#add in the indicators that MD specifies? keep for now
-impute <- c("ind_der_deltaeta_jet_jet","ind_der_mass_jet_jet"   , "ind_der_prodeta_jet_jet",  "ind_der_lep_eta_centrality" , "ind_pri_jet_subleading_pt", "ind_pri_jet_subleading_eta" , "ind_pri_jet_subleading_phi")
-# Add missingness indicators to task$covariates
-(task$covariates <- c(task$covariates, impute))
-task$impute <- impute
+
 
 # Confirm that all of our covariates exist in the data.
 all(task$covariates %in% names(task$data))
 #names(!task$covariates %in% task$data)
 ```
-
+   
 ## Convert factors to indicators
 
 ```{r factors_to_indicators}
@@ -241,7 +248,7 @@ colMeans(is.na(test_df))
 # TODO: should use imputation medians from the training data rather the test data.
 impute_test = ck37r::impute_missing_values(test_df, verbose = TRUE)
 test_df = impute_test$data
-
+names(test_df)
 
 #other imputation
 impute_test_md2<- readRDS("./data/testimpute_md2.rds")
