@@ -9,10 +9,10 @@ knitr::opts_chunk$set(echo = TRUE)
 # Load an initial pair of startup functions.
 source("R/_startup.R")
 # Load necessary libraries; set auto_install = TRUE to try to install any needed packages.
-startup(auto_install = FALSE, verbose = FALSE,
+startup(auto_install = FALSE, verbose = FALSE)#,
         # We are assuming this model is being run on a server with 128GB+ RAM.
         # TODO: this is not enough memory - need to increase.
-        java_mem = "120g")
+        #java_mem = "120g")
 # Load all .R files in the R/ subdirectory.
 ck37r::load_all_code("R", verbose = TRUE)
 
@@ -85,7 +85,8 @@ sl =
                X = task$data[, task$covariates],
                family = binomial(),
                verbose = TRUE,
-               SL.library = sl_lib,
+               #SL.library = sl_lib,
+               SL.library = list(c("SL.xgboost_cv2", "screen.corRank5")),
                # TODO: consider method = nnlogLik
                cvControl = SuperLearner.CV.control(V = 5L))
                # Re-run with 20 folds when we want to finalize our model.
