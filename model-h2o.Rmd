@@ -49,15 +49,14 @@ class(h2o_data)
 dim(h2o_data)
 
 # split into train and validation sets
-h2o_split = h2o.splitFrame(data = h2o_data, ratios = 0.8, seed = 8273704)
+h2o_split = h2o.splitFrame(data = h2o_data, ratios = 0.97, seed = 8273704)
 h2o_train = h2o_split[[1]]
 h2o_validation = h2o_split[[2]]
-# 200k in train
+# 243k in train
 dim(h2o_train)
-# 50k in validation
+# 7.4k in validation
 dim(h2o_validation)
 
-# TODO: add validation frame.
 estimator =
   h2o::h2o.automl(y = "_outcome",
                   x = task$covariates,
@@ -67,20 +66,37 @@ estimator =
                   #fold_column = cv_fold_name,
                   seed = 3137033,
                   #nfolds = 5L,
-                  nfolds = 5L,
+                  nfolds = 10L,
                   #weights_column = "_obsWeights",
                   #max_runtime_secs = max_runtime_secs,
-                  max_models = 100L,
+                  max_models = 200L,
                   # Set to 0 to disable runtime execution maximum.
-                  # 10 hour limit
-                  max_runtime_secs = 36000,
+                  # 3 hour limit
+                  max_runtime_secs =  3 * 3600,
                   #stopping_rounds = 5L,
                   stopping_metric = "AUC",
                   sort_metric = "AUC")
 estimator@leaderboard
+head(estimator@leaderboard, n = nrow(estimator@leaderboard))
+
+# Get model ids for all models in the AutoML Leaderboard
+model_ids <- as.data.frame(estimator@leaderboard$model_id)[,1]
+# Get the "All Models" Stacked Ensemble model
+ensemble <- h2o.getModel(grep("StackedEnsemble_AllModels", model_ids, value = TRUE)[1])
+# Get the Stacked Ensemble metalearner model
+metalearner <- h2o.getModel(ensemble@model$metalearner$name)
+# Review ensemble weights.
+(vimp = as.data.frame(h2o.varimp(metalearner)))
+
+# Review used models.
+options(scipen = 15)
+vimp[vimp$coefficients > 0, ]
 
 # X mins on Benten
 # cat("Execution time:", round(sl$times$everything["elapsed"] / 60, 1), "minutes.\n")
+
+# Save h2o model.
+h2o.saveModel(estimator@leader, "data/", force = TRUE)
 
 # Save our results and our task for posterity.
 save(estimator, task,
@@ -122,8 +138,11 @@ TODO: convert more of this code to functions so that it isn't duplicated across 
 
 ```{r test_prediction}
 
+names(task)
+
 # Need to integrate our dataframe into h2o.
 h2o_test = as.h2o(task$data_test)
+dim(h2o_test)
 
 # Takes only 4 seconds.
 system.time({
@@ -133,6 +152,7 @@ system.time({
 
 # Review prediction distribution.
 summary(predictions)
+library(ggplot2)
 qplot(predictions, bins = 100L) + theme_minimal()
 ggsave(paste0("visuals/test-hist-", task$model_name, ".png"))
 
@@ -151,10 +171,10 @@ prop.table(table(export$Label))
 
 # Generate a csv file to upload to competition submission page.
 # TODO: add date+time to filename?
-version = "m10"
+# version = "m100"
 rio::export(export,
             file = paste0("exports/submission-", task$model_name, "-",
-                          threshold, "-",  version, "-",
+                          #threshold, "-",  version, "-",
                           format(Sys.time(), "%m-%d"), ".csv"))
 
 ```
