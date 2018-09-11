@@ -340,7 +340,7 @@ completedataMD <-newdata1
     save(completedataMD, file="completedataMD.rda")
     save(completedataMD1, file="completedata1MD.rda")
 
-    #cleaning test data
+    #########cleaning test data
 getwd()
 setwd("C:/Users/makdi/Desktop/kpdor-dsc/kp-dsc-2018/testdata")
 
@@ -485,7 +485,8 @@ newdata <- data[c(-32,-34,-35)]
 save(newdata, file="newdata.rda")
 load("newdata.Rda")
 newdata1<-newdata # will use newdata1 to add new variable
-
+save(impute_md2, file="imputed_train.rda")
+load("imputed_train.Rda")
 library(dlookr)
 library(dplyr)
 diagnose(newdata)
@@ -510,6 +511,7 @@ newdata1$ind_pri_jet_subleading_pt<- ifelse(!is.na(newdata1$pri_jet_subleading_p
 newdata1$ind_pri_jet_subleading_eta<- ifelse(!is.na(newdata1$pri_jet_subleading_eta),1,0)
 newdata1$ind_pri_jet_subleading_phi<- ifelse(!is.na(newdata1$pri_jet_subleading_phi),1,0)
 
+#IMPUTING MISSINGNESS
 # Keep only numeric columns
 newdata %>%
   gather() %>%                             # Convert to key-value pairs
@@ -530,10 +532,8 @@ ggplot(data = melt.boston, aes(x = value, )) +   stat_density() +
 
 boxplot(newdata) +facet_wrap(~variable, scales = "free")
 
-
-
-
-
+imputed_train<-impute_md2
+imputer_na()
 #outliers
 #install.packages("dlookr")
 library(dlookr)
@@ -547,7 +547,7 @@ diagnose_outlier(newdata) %>%
   select(-outliers_cnt)
 
 #visualize anomaly values of all numeric variables with an outlier ratio of 0.5% or more.:
-
+diagnose_outlier(imputed_train)
 library( dplyr )
 newdata %>%
   plot_outlier(diagnose_outlier(newdata) %>%
@@ -610,7 +610,7 @@ drops<- c("pri_jet_leading_pt","pri_jet_all_pt",  "der_deltaeta_jet_jet",  "der_
           "pri_met",
           "pri_lep_pt")
 
-completedataMD1<- newdata1[ , !(names(newdata1) %in% drops)]
+completedataTESTMD1<- newdata1[ , !(names(newdata1) %in% drops)]
 completedataMD <-newdata1
 
 #saving newdata:

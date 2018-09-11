@@ -4,6 +4,10 @@ output: html_document
 ---
 Same cleaning code as clean.Rmd, but with the missForest imputation added.
 
+edit: need to run part of this on Rcomp and the other part on my computer, so ordering is a little weird
+missforest for train data saved as: missforest_train.rds
+missforest for test data saved as: missforest_test.rds
+
 
 ```{r setup, include=TRUE}
 knitr::opts_chunk$set(echo = TRUE)
@@ -135,7 +139,18 @@ library(doParallel)
 registerDoParallel(cores = min(20, RhpcBLASctl::get_num_cores()))
 # sample <- data[sample(1:nrow(data), 250, replace=F),]
  #impute2 <- missForest(sample[task$covariates], maxiter = 4, ntree = 50, verbose = F, parallelize='forests', nodesize = c(100, 100))
-impute2 <- missForest(data[task$covariates], maxiter = 4, ntree = 50, verbose = F, parallelize='forests',nodesize = c(100, 100))
+impute2 <- missForest(data[task$covariates], maxiter = 5, ntree = 50, verbose = F, parallelize='forests',nodesize = c(100, 100))
+
+
+saveRDS(impute2$ximp, file = './data/missforest_train.rds') 
+impute2<- readRDS("./data/missforest_train.rds")
+
+#########################################################
+####run the above on rcomp, the rest on my mac
+#########################################################
+
+
+
 
 dim(impute2$ximp)
 dim(indicators)
@@ -228,6 +243,13 @@ set.seed(2346789)
 # sample <- test_df[sample(1:nrow(data), 250, replace=F),]
 # sample2 <- missForest(sample[task$covariates], maxiter = 4, ntree = 50, verbose = F, parallelize='forests', nodesize = c(100, 100))
 impute_test2 <- missForest(test_df, maxiter = 4, ntree = 50, verbose = F, parallelize='forests',nodesize = c(100, 100))
+
+
+saveRDS(impute_test2$ximp, file = './data/missforest_test.rds') 
+impute_test2<- readRDS("./data/missforest_test.rds")
+
+
+
 
 dim(impute_test2$ximp)
 dim(indicators)
