@@ -5,6 +5,8 @@ output: html_document
 Same cleaning code as clean.Rmd, but with the missForest imputation added.
 
 edit: need to run part of this on Rcomp and the other part on my computer, so ordering is a little weird
+missforest for train data saved as: missforest_train.rds
+missforest for test data saved as: missforest_test.rds
 
 
 ```{r setup, include=TRUE}
