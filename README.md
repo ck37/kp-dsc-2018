@@ -1,4 +1,4 @@
-# KP Data Science Competition 2018
+# Kaiser Permanente Data Science Competition 2018
 
 **Team**: Decision Tree huggers
 
