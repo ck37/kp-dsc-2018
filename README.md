@@ -1,5 +1,9 @@
 # KP Data Science Competition 2018
 
+**Team**: Decision Tree huggers
+
+**Members**: Chris Kennedy, [Nerissa Nance](https://github.com/nerissanance), [Makdine Dontsi](https://github.com/makdine), [Noel Pimentel](https://github.com/noelpimentel)
+
 ## Setup
 
 * train.csv and test.csv should be placed into `data-raw/`
