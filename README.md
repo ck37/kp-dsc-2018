@@ -1,6 +1,6 @@
 # Kaiser Permanente Data Science Competition 2018
 
-**Team**: Decision Tree huggers
+**Team**: Decision Tree Huggers (4th out of 30 teams)
 
 **Members**: Chris Kennedy, [Nerissa Nance](https://github.com/nerissanance), [Makdine Dontsi](https://github.com/makdine), [Noel Pimentel](https://github.com/noelpimentel)
 
